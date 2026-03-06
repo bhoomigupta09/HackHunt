@@ -35,17 +35,17 @@ const MyProfile = ({ user }) => {
 
       const response = await apiClient.fetchProfile(userId, userRole);
       
-      if (response.profile) {
-        setProfileData({
-          firstName: response.profile.firstName || "",
-          lastName: response.profile.lastName || "",
-          email: response.profile.email || "",
-          phoneNumber: response.profile.phoneNumber || "",
-          bio: response.profile.bio || "",
-          skills: response.profile.skills || [],
-          profilePicture: response.profile.profilePicture || ""
-        });
-      }
+      if (response) {
+  setProfileData({
+    firstName: response.firstName || "",
+    lastName: response.lastName || "",
+    email: response.email || "",
+    phoneNumber: response.phoneNumber || "",
+    bio: response.bio || "",
+    skills: response.skills || [],
+    profilePicture: response.profilePicture || ""
+  });
+}
     } catch (err) {
       console.error("Profile fetch error:", err);
       // Fall back to localStorage data if API fails

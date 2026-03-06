@@ -1,6 +1,6 @@
 // Client-side API functions for the frontend
 
-const API_BASE_URL = 'http://localhost:3000/api/v1';
+const API_BASE_URL = 'http://localhost:5000/api/v1';
 
 class APIClient {
   async request(endpoint, options = {}) {

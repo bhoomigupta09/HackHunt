@@ -121,7 +121,7 @@ userRouter.post("/signup", async (req, res) => {
 });
 
 /* ================= SIGNIN ================= */
-userRouter.post("/signin", async (req, res) => {
+/*userRouter.post("/signin", async (req, res) => {
     try {
         const { email, password, role = 'user' } = req.body;
         let model = (role === 'organizer') ? Organizer : (role === 'admin' ? Admin : User);
@@ -137,7 +137,49 @@ userRouter.post("/signin", async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});*/
+/* ================= SIGNIN ================= */
+userRouter.post("/signin", async (req, res) => {
+    try {
+        // ... (aapka purana logic) ...
+        
+        user.lastLogin = new Date();
+        await user.save();
+
+        // Response mein firstName add kar do taaki Dashboard par Vani dikhe
+        res.json({ 
+            message: "Signin successful", 
+            userId: user._id, 
+            role, 
+            firstName: user.firstName // <-- Ye line add karo
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/* ================= GET PROFILE ================= */
+userRouter.get("/profile/:userId/:role", async (req, res) => {
+    try {
+        const { userId, role } = req.params;
+        console.log(`🔍 Profile maangi gayi hai ID: ${userId} aur Role: ${role} ke liye`);
+
+        let model = (role === 'organizer') ? Organizer : (role === 'admin' ? Admin : User);
+        const user = await model.findById(userId).select("-password");
+        
+        console.log("✅ Database se ye data mila:", user); // Isse terminal mein check karo
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        res.json(user);
+    } catch (error) {
+        console.error("❌ Profile Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // SABSE IMPORTANT: Export models and router together
+//module.exports = { User, Organizer, Admin, userRouter };
+//module.exports= userRouter;
 module.exports = { User, Organizer, Admin, userRouter };
