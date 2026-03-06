@@ -1,12 +1,52 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 
-import { ChevronDown, Rocket } from 'lucide-react';
+import { Rocket, User, Settings2, ShieldCheck, UserPlus, Hammer } from 'lucide-react';
+import NavbarDropdownButton from '../NavbarDropdownButton';
 
 
 const Header = () => {
-  const [loginDropdownOpen, setLoginDropdownOpen] = useState(false);
-  const [signupDropdownOpen, setSignupDropdownOpen] = useState(false);
+  // prepare menu items for login and signup
+  const loginItems = [
+    {
+      href: '/login-user',
+      icon: <User className="h-5 w-5 text-purple-600" />, // user icon
+      iconBg: 'bg-purple-100',
+      title: 'Login as User',
+      description: 'Explore and join hackathons',
+    },
+    {
+      href: '/login-organizer',
+      icon: <Settings2 className="h-5 w-5 text-purple-600" />,
+      iconBg: 'bg-purple-100',
+      title: 'Login as Organizer',
+      description: 'Manage your hackathons',
+    },
+    {
+      href: '/login-admin',
+      icon: <ShieldCheck className="h-5 w-5 text-purple-600" />,
+      iconBg: 'bg-purple-100',
+      title: 'Login as Admin',
+      description: 'System administration',
+    },
+  ];
+
+  const signupItems = [
+    {
+      href: '/signup-user',
+      icon: <UserPlus className="h-5 w-5 text-purple-600" />,
+      iconBg: 'bg-purple-100',
+      title: 'Sign up as User',
+      description: 'Explore and join hackathons',
+    },
+    {
+      href: '/signup-organizer',
+      icon: <Hammer className="h-5 w-5 text-purple-600" />,
+      iconBg: 'bg-purple-100',
+      title: 'Sign up as Organizer',
+      description: 'Organize hackathons',
+    },
+  ];
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -26,79 +66,9 @@ const Header = () => {
           </div>
 
           {/* Right side - Login and Sign up */}
-          <nav className="flex items-center space-x-4">
-            {/* Login Dropdown */}
-            <div className="relative group">
-              <button
-                onClick={() => setLoginDropdownOpen(!loginDropdownOpen)}
-                className="flex items-center space-x-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
-              >
-                <span>Login</span>
-                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${loginDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {loginDropdownOpen && (
-                <div className="absolute top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 right-0">
-                  <Link
-                    to="/login-user"
-                    onClick={() => setLoginDropdownOpen(false)}
-                    className="block px-4 py-3 text-gray-700 hover:bg-purple-50 rounded-t-lg transition-colors duration-200 border-b border-gray-100"
-                  >
-                    <span className="font-medium">👤 Login as User</span>
-                    <p className="text-xs text-gray-500">Explore and join hackathons</p>
-                  </Link>
-                  <Link
-                    to="/login-organizer"
-                    onClick={() => setLoginDropdownOpen(false)}
-                    className="block px-4 py-3 text-gray-700 hover:bg-purple-50 transition-colors duration-200 border-b border-gray-100"
-                  >
-                    <span className="font-medium">⚙️ Login as Organizer</span>
-                    <p className="text-xs text-gray-500">Manage your hackathons</p>
-                  </Link>
-                  <Link
-                    to="/login-admin"
-                    onClick={() => setLoginDropdownOpen(false)}
-                    className="block px-4 py-3 text-gray-700 hover:bg-purple-50 rounded-b-lg transition-colors duration-200"
-                  >
-                    <span className="font-medium">🛡️ Login as Admin</span>
-                    <p className="text-xs text-gray-500">System administration</p>
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Sign up Dropdown */}
-            <div className="relative group">
-              <button
-                onClick={() => setSignupDropdownOpen(!signupDropdownOpen)}
-                className="flex items-center space-x-1 px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors duration-200"
-              >
-                <span>Sign up</span>
-                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${signupDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {signupDropdownOpen && (
-                <div className="absolute top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 right-0">
-                  <Link
-                    to="/signup-user"
-                    onClick={() => setSignupDropdownOpen(false)}
-                    className="block px-4 py-3 text-gray-700 hover:bg-purple-50 rounded-t-lg transition-colors duration-200 border-b border-gray-100"
-                  >
-                    <span className="font-medium">👤 Sign up as User</span>
-                    <p className="text-xs text-gray-500">Explore and join hackathons</p>
-                  </Link>
-                  <Link
-                    to="/signup-organizer"
-                    onClick={() => setSignupDropdownOpen(false)}
-                    className="block px-4 py-3 text-gray-700 hover:bg-purple-50 transition-colors duration-200 border-b border-gray-100"
-                  >
-                    <span className="font-medium">⚙️ Sign up as Organizer</span>
-                    <p className="text-xs text-gray-500">Organize hackathons</p>
-                  </Link>
-                  
-                </div>
-              )}
-            </div>
+          <nav className="flex items-center space-x-4 overflow-visible">
+            <NavbarDropdownButton label="Login" items={loginItems} variant="filled" />
+            <NavbarDropdownButton label="Sign up" items={signupItems} variant="filled" />
           </nav>
         </div>
       </div>
