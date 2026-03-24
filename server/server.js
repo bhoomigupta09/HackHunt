@@ -116,3 +116,5 @@ app.listen(PORT, () => {
     console.log(`👉 Signin URL: http://localhost:5000/api/v1/user/signin`);
     console.log(`👉 Forgot Password URL: http://localhost:5000/api/v1/forgot-password`);
 });
+const hackathonRoutes = require('./routes/hackathonRoutes');
+app.use('/api/hackathons', hackathonRoutes);

@@ -2,11 +2,15 @@ import React, { useState, useMemo } from 'react';
 import {
   Search,
   Loader2,
-  Zap
+  Sparkles
 } from 'lucide-react';
 import HackathonCard from '../components/HackathonCard';
 import SearchAndFilter from '../components/SearchAndFilter';
+import WhyChooseHackHunt from '../components/WhyChooseHackHunt';
 import { useHackathons, useHackathonStats } from '../hooks/useHackathons';
+
+// local assets
+import heroImage from '../assets/hero.png';
 
 const Home = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,13 +18,13 @@ const Home = () => {
   const [selectedType, setSelectedType] = useState('');
 
   const filters = useMemo(
-  () => ({
-    searchTerm: searchTerm || "",
-    status: selectedStatus || "",
-    type: selectedType || ""
-  }),
-  [searchTerm, selectedStatus, selectedType]
-);
+    () => ({
+      searchTerm: searchTerm || '',
+      status: selectedStatus || '',
+      type: selectedType || ''
+    }),
+    [searchTerm, selectedStatus, selectedType]
+  );
 
   const {
     hackathons,
@@ -70,48 +74,93 @@ const Home = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      {/* Hero Section with Enhanced Background */}
-      <div className="relative overflow-hidden">
-        {/* Animated Background Shapes */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400 to-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style={{animationDelay: '2s'}}></div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-blue-200/30 blur-3xl" />
+          <div className="absolute right-0 top-24 h-64 w-64 rounded-full bg-purple-200/30 blur-3xl" />
+          <div className="absolute bottom-10 left-10 h-48 w-48 rounded-full bg-indigo-200/30 blur-3xl" />
         </div>
 
-        {/* Hero Content */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-          <div className="mb-8 inline-block">
-            <div className="flex items-center justify-center space-x-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-purple-200">
-              <Zap className="h-4 w-4 text-yellow-500" />
-              <span className="text-sm font-semibold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Discover Amazing Opportunities</span>
+        <style jsx>{`
+          @keyframes fade-up {
+            from {
+              opacity: 0;
+              transform: translateY(24px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          .animate-fade-up {
+            animation: fade-up 0.8s ease-out both;
+          }
+          .animate-fade-up-delayed {
+            animation: fade-up 1s ease-out 0.12s both;
+          }
+        `}</style>
+
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex min-h-[calc(100vh-88px)] flex-col items-center justify-between gap-12 py-16 md:flex-row md:gap-16 md:py-24">
+            <div className="animate-fade-up flex w-full max-w-xl flex-col items-start justify-center text-left md:w-[45%]">
+              <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-4 py-1 text-sm font-medium text-purple-600 shadow-sm">
+                <Sparkles className="h-4 w-4" />
+                Discover amazing opportunities
+              </div>
+
+              <div className="mt-6 space-y-5">
+              <h1 className="max-w-lg text-5xl font-extrabold leading-tight tracking-[-0.04em] text-slate-900 md:text-6xl lg:text-7xl">
+                Discover
+                <span className="mt-2 block bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+                  Hackathons
+                </span>
+              </h1>
+
+              <p className="mt-2 text-lg font-medium text-slate-700 md:text-xl">
+                Build. Compete. Win.
+              </p>
+
+              <p className="max-w-lg text-base leading-relaxed text-gray-600 md:text-lg">
+                Explore and participate in hackathons from top platforms worldwide.
+                Build innovative solutions, connect with fellow developers, and
+                turn your next idea into something worth shipping.
+              </p>
+              </div>
+
+              <div className="mt-6 flex items-center">
+                <a
+                  href="#hackathons"
+                  className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-blue-600/20 transition duration-300 hover:scale-105 hover:bg-blue-700"
+                >
+                  Explore Hackathons
+                  <span className="ml-2" aria-hidden="true">&rarr;</span>
+                </a>
+              </div>
+            </div>
+
+            <div className="animate-fade-up-delayed flex w-full justify-center md:w-[55%] md:justify-end">
+              <div className="group relative w-full">
+                <div className="absolute inset-y-10 right-0 hidden w-[88%] rounded-full bg-gradient-to-r from-blue-200/40 via-purple-200/40 to-indigo-200/40 blur-3xl md:block" />
+                <img
+                  src={heroImage}
+                  alt="Team collaborating"
+                  className="relative h-auto w-full max-w-none object-contain transition duration-300 group-hover:scale-105 md:scale-110 md:translate-x-6 lg:scale-[1.18]"
+                />
+              </div>
             </div>
           </div>
-
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6">
-            <span className="text-gray-900">Find</span>
-            <span className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent block">Hackathons</span>
-            <span className="text-gray-600 text-3xl sm:text-4xl md:text-5xl font-semibold block mt-2">that Match Your Passion</span>
-          </h1>
-
-          <p className="text-lg sm:text-xl text-gray-700 max-w-3xl mx-auto mb-8 leading-relaxed">
-            Explore and participate in hackathons from top platforms worldwide. Build innovative solutions, connect with fellow developers, and unleash your potential.
-          </p>
-
-          <div className="flex justify-center mt-6">
-  <a
-    href="#hackathons"
-    className="px-10 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200"
-  >
-    Explore Hackathons
-  </a>
-
-          </div>
         </div>
-      </div>
+      </section>
+
+      <WhyChooseHackHunt />
 
       {/* Hackathons List Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16" id="hackathons">
+      <div
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16"
+        id="hackathons"
+      >
         <div id="filter" className="mb-8">
           <SearchAndFilter
             searchTerm={searchTerm}
@@ -159,8 +208,8 @@ const Home = () => {
                 <div className="h-4 bg-gray-200 rounded mb-4"></div>
                 <div className="space-y-2">
                   <div className="h-4 bg-gray-200 rounded"></div>
-                <div className="h-4 bg-gray-200 rounded"></div>
-                <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded"></div>
                 </div>
               </div>
             ))}

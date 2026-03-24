@@ -116,7 +116,7 @@ const LoginAdmin = () => {
               <input type="checkbox" className="rounded" />
               <span>Remember me</span>
             </label>
-            <Link to="#" className="text-red-600 hover:text-red-700 font-medium">
+            <Link to={`/forgot-password?role=admin&email=${encodeURIComponent(email)}`} className="text-red-600 hover:text-red-700 font-medium">
               Forgot password?
             </Link>
           </div>

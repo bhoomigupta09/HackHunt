@@ -109,7 +109,7 @@ const LoginUser = () => {
               <input type="checkbox" className="rounded" />
               <span>Remember me</span>
             </label>
-            <Link to="#" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link to={`/forgot-password?role=user&email=${encodeURIComponent(email)}`} className="text-blue-600 hover:text-blue-700 font-medium">
               Forgot password?
             </Link>
           </div>

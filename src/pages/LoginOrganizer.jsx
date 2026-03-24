@@ -109,7 +109,7 @@ const LoginOrganizer = () => {
               <input type="checkbox" className="rounded" />
               <span>Remember me</span>
             </label>
-            <Link to="#" className="text-amber-600 hover:text-amber-700 font-medium">
+            <Link to={`/forgot-password?role=organizer&email=${encodeURIComponent(email)}`} className="text-amber-600 hover:text-amber-700 font-medium">
               Forgot password?
             </Link>
           </div>

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 
 import { Rocket, User, Settings2, ShieldCheck, UserPlus, Hammer } from 'lucide-react';
 import NavbarDropdownButton from '../NavbarDropdownButton';
+// logo image
+import logoImg from '../../assets/logo.png';
 
 
 const Header = () => {
@@ -49,24 +51,23 @@ const Header = () => {
   ];
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Left side - Logo only */}
+    <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-md shadow-md border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="flex justify-between items-center">
+          {/* Left side - Logo and text */}
           <div className="flex items-center">
-         <Link to="/" className="flex items-center space-x-2 group">
-  <div className="p-2 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg group-hover:scale-105 transition-transform duration-200">
-    <Rocket className="h-5 w-5 text-white" />
-  </div>
-
-  <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-    HackHunt
-  </span>
-</Link>
+            <Link to="/" className="flex items-center space-x-3 group">
+              <div className="h-9 w-auto">
+                <img src={logoImg} alt="HackHunt logo" className="h-full w-auto object-contain" />
+              </div>
+              <span className="text-2xl font-extrabold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                HackHunt
+              </span>
+            </Link>
           </div>
 
           {/* Right side - Login and Sign up */}
-          <nav className="flex items-center space-x-4 overflow-visible">
+          <nav className="flex items-center space-x-3 sm:space-x-4">
             <NavbarDropdownButton label="Login" items={loginItems} variant="filled" />
             <NavbarDropdownButton label="Sign up" items={signupItems} variant="filled" />
           </nav>

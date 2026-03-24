@@ -1,6 +1,7 @@
 // Client-side API functions for the frontend
 
-const API_BASE_URL = 'http://localhost:5000/api/v1';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '/api/v1';
 
 class APIClient {
   async request(endpoint, options = {}) {
@@ -22,14 +23,22 @@ class APIClient {
       
       if (!response.ok) {
         let errorMessage = `API Error: ${response.status}`;
+        let errorData = null;
         if (isJson) {
-          const errorData = await response.json();
+          errorData = await response.json();
           errorMessage = errorData.message || errorData.error || errorMessage;
         } else {
           const errorText = await response.text();
           errorMessage = errorText || errorMessage;
         }
-        throw new Error(errorMessage);
+        const error = new Error(errorMessage);
+        if (errorData?.errors) {
+          error.errors = errorData.errors;
+        }
+        if (errorData?.message) {
+          error.message = errorData.message;
+        }
+        throw error;
       }
 
       return await response.json();
@@ -39,7 +48,7 @@ class APIClient {
       // Provide more specific error messages
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         throw new Error(
-          `Failed to connect to backend server. Please make sure the server is running on ${API_BASE_URL}. ` +
+          `Failed to connect to backend server. Please make sure the server is running and reachable at ${API_BASE_URL}. ` +
           `Error: ${error.message}`
         );
       }
@@ -78,6 +87,27 @@ class APIClient {
         password,
         role
       }),
+    });
+  }
+
+  async requestPasswordReset(email) {
+    return this.request('/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async verifyResetOtp(email, otp) {
+    return this.request('/forgot-password/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    });
+  }
+
+  async resetPassword(email, newPassword) {
+    return this.request('/forgot-password/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, newPassword }),
     });
   }
 
