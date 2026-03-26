@@ -5,6 +5,10 @@ const sendEmail = require("../utils/sendEmail");
 
 const router = express.Router();
 
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+}
+
 async function findAccountByEmail(email) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
 
@@ -15,15 +19,22 @@ async function findAccountByEmail(email) {
   );
 }
 
+// Send OTP
 router.post("/", async (req, res) => {
   const { email } = req.body;
 
   try {
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        message: "Please enter a valid email address."
+      });
+    }
+
     const user = await findAccountByEmail(email);
 
     if (!user) {
       return res.status(404).json({
-        message: "User is email se register nahi hai!"
+        message: "No account is registered with this email."
       });
     }
 
@@ -32,7 +43,8 @@ router.post("/", async (req, res) => {
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    const message = `Your reset password OTP is: ${otp}. It expires in 10 minutes.`;
+    const message = `Your password reset OTP is: ${otp}. It will expire in 10 minutes.`;
+
     const emailResult = await sendEmail({
       email: user.email,
       subject: "Password Reset Request",
@@ -42,22 +54,23 @@ router.post("/", async (req, res) => {
     if (emailResult?.skipped) {
       return res.status(200).json({
         message:
-          "OTP generated. Email is not configured on this local server, so OTP was returned for testing.",
+          "OTP generated. Email service is not configured on this server, so the OTP is returned for testing.",
         otp
       });
     }
 
     return res.status(200).json({
-      message: "Email bhej diya gaya hai!"
+      message: "A verification code has been sent to your email address."
     });
   } catch (error) {
     console.error("Forgot password error:", error);
     return res.status(500).json({
-      message: "Kuch gadbad ho gayi, firse try karo."
+      message: "Something went wrong. Please try again."
     });
   }
 });
 
+// Verify OTP
 router.post("/verify-otp", async (req, res) => {
   const { email, otp } = req.body;
 
@@ -66,20 +79,21 @@ router.post("/verify-otp", async (req, res) => {
 
     if (!user || user.resetPasswordOTP !== otp || user.resetPasswordExpires < Date.now()) {
       return res.status(400).json({
-        message: "OTP galat hai ya expire ho gaya hai!"
+        message: "Invalid or expired OTP."
       });
     }
 
     return res.status(200).json({
-      message: "OTP sahi hai! Password reset kar sakte ho."
+      message: "OTP verified successfully. You can now reset your password."
     });
   } catch (error) {
     return res.status(500).json({
-      message: "Kuch gadbad ho gayi."
+      message: "Something went wrong."
     });
   }
 });
 
+// Reset Password
 router.post("/reset-password", async (req, res) => {
   const { email, newPassword } = req.body;
 
@@ -88,7 +102,7 @@ router.post("/reset-password", async (req, res) => {
 
     if (!user) {
       return res.status(404).json({
-        message: "User nahi mila!"
+        message: "User not found."
       });
     }
 
@@ -99,11 +113,11 @@ router.post("/reset-password", async (req, res) => {
     await user.save();
 
     return res.status(200).json({
-      message: "Password successfully change ho gaya!"
+      message: "Password has been successfully updated."
     });
   } catch (error) {
     return res.status(500).json({
-      message: "Kuch gadbad ho gayi."
+      message: "Something went wrong."
     });
   }
 });

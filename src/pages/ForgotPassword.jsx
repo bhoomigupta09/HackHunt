@@ -41,6 +41,47 @@ const accentClasses = {
   }
 };
 
+const normalizeFeedbackMessage = (rawMessage, fallbackMessage) => {
+  const message = String(rawMessage || "").trim();
+
+  if (!message) {
+    return fallbackMessage;
+  }
+
+  const legacyOtpMessages = [
+    "Email bhej diya gaya hai!",
+    "Email bhej diya gaya hai",
+    "OTP has been sent to your email.",
+    "OTP sent to your email."
+  ];
+
+  if (legacyOtpMessages.includes(message)) {
+    return "A verification code has been sent to your email address.";
+  }
+
+  return message;
+};
+
+const normalizeErrorMessage = (rawMessage, fallbackMessage) => {
+  const message = String(rawMessage || "").trim();
+
+  if (!message) {
+    return fallbackMessage;
+  }
+
+  const legacyErrorMessages = {
+    "User not registered with this email": "No account is registered with this email address.",
+    "User not registered with this email": "No account is registered with this email address.",
+    "No account is registered with this email.": "No account is registered with this email address.",
+    "Please enter a valid email address.": "Please enter a valid email address.",
+    "Unable to send OTP.": "We couldn't send the verification code. Please try again."
+  };
+
+  return legacyErrorMessages[message] || message;
+};
+
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -67,18 +108,34 @@ const ForgotPassword = () => {
   const handleSendOtp = async (e) => {
     e.preventDefault();
     clearFeedback();
+
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await apiClient.requestPasswordReset(email);
-      setMessage(response.message || "OTP sent to your email.");
+      setMessage(
+        normalizeFeedbackMessage(
+          response.message,
+          "A verification code has been sent to your email address."
+        )
+      );
       if (response.otp) {
         setDevOtp(response.otp);
         setOtp(response.otp);
       }
       setStep(2);
     } catch (err) {
-      setError(err.message || "Unable to send OTP.");
+      setError(
+        normalizeErrorMessage(
+          err.message,
+          "We couldn't send the verification code. Please try again."
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -169,6 +226,7 @@ const ForgotPassword = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 className={inputClassName}
                 placeholder="you@example.com"
+                autoComplete="email"
                 disabled={loading}
                 required
               />

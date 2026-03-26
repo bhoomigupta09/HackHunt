@@ -1,35 +1,59 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, X, LogOut } from "lucide-react";
+import {
+  Activity,
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  ShieldCheck,
+  Users,
+  X
+} from "lucide-react";
 import AdminProfile from "../components/Dashboard/AdminProfile";
 import ManageUsers from "../components/Dashboard/ManageUsers";
 import HackathonApprovals from "../components/Dashboard/HackathonApprovals";
+import LogoutConfirmModal from "../components/Dashboard/LogoutConfirmModal";
+import AdminOverview from "../components/Dashboard/AdminOverview";
+import AdminActivityLog from "../components/Dashboard/AdminActivityLog";
+import AdminSectionErrorBoundary from "../components/Dashboard/AdminSectionErrorBoundary";
+
+const menuItems = [
+  { id: "overview", label: "Platform Overview", icon: LayoutDashboard },
+  { id: "profile", label: "My Profile", icon: ShieldCheck },
+  { id: "approvals", label: "Hackathon Approvals", icon: ClipboardList },
+  { id: "manage", label: "Manage Users & Organizers", icon: Users },
+  { id: "activity", label: "Activity Log", icon: Activity }
+];
 
 const AdminDashboard = () => {
-  const [activeSection, setActiveSection] = useState("profile");
+  const [activeSection, setActiveSection] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [user, setUser] = useState(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is logged in as admin
     const userId = localStorage.getItem("userId");
     const userRole = localStorage.getItem("userRole");
     const userName = localStorage.getItem("userName");
 
     if (!userId || userRole !== "admin") {
+      setAuthChecked(true);
       navigate("/login-admin");
       return;
     }
 
     setUser({
       id: userId,
-      name: userName,
+      name: userName || "Admin",
       role: userRole
     });
+    setAuthChecked(true);
   }, [navigate]);
 
-  const handleLogout = () => {
+  const confirmLogout = () => {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userId");
     localStorage.removeItem("userRole");
@@ -38,97 +62,113 @@ const AdminDashboard = () => {
     navigate("/");
   };
 
-  const menuItems = [
-    { id: "profile", label: "My Profile", icon: "👤" },
-    { id: "approvals", label: "Hackathon Approvals", icon: "📋" },
-    { id: "manage", label: "Manage Users & Organizers", icon: "👥" }
-  ];
+  if (!authChecked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.14),transparent_24%),linear-gradient(180deg,#fff1f2,#fff7ed_40%,#f8fafc)]">
+        <div className="rounded-[28px] border border-white/70 bg-white/85 px-6 py-5 text-sm font-medium text-slate-600 shadow-[0_24px_90px_rgba(15,23,42,0.08)] backdrop-blur">
+          Loading admin dashboard...
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div
+    <div className="flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.14),transparent_24%),linear-gradient(180deg,#fff1f2,#fff7ed_40%,#f8fafc)] animate-pageLoad">
+      <aside
         className={`${
-          sidebarOpen ? "w-64" : "w-20"
-        } bg-gradient-to-b from-red-500 to-pink-600 text-white transition-all duration-300 shadow-lg`}
+          sidebarOpen ? "w-72" : "w-20"
+        } relative flex flex-col overflow-y-auto border-r border-white/20 bg-gradient-to-b from-rose-600 via-red-500 to-fuchsia-600 text-white transition-all duration-300 shadow-2xl`}
       >
-        {/* Header */}
-        <div className="p-4 flex items-center justify-between">
-          <h1 className={`${!sidebarOpen && "hidden"} font-bold text-xl`}>
-            HackHunt
-          </h1>
+        <div className="flex items-center justify-between p-4">
+          <h1 className={`${!sidebarOpen ? "hidden" : ""} text-xl font-bold`}>HackHunt</h1>
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1 hover:bg-pink-500 rounded-lg transition"
+            type="button"
+            onClick={() => setSidebarOpen((value) => !value)}
+            className="rounded-lg p-1 transition hover:bg-pink-500"
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
-        {/* User Info */}
-        <div className="px-4 py-6 border-b border-pink-400">
-          <div className={`flex items-center ${!sidebarOpen && "justify-center"}`}>
-            <div className="w-10 h-10 bg-pink-300 rounded-full flex items-center justify-center font-bold text-pink-900">
-              {user?.name?.charAt(0)?.toUpperCase()}
+        <div className="border-b border-pink-400 px-4 py-6">
+          <div className={`flex items-center ${!sidebarOpen ? "justify-center" : ""}`}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-300 font-bold text-pink-900">
+              {user?.name?.charAt(0)?.toUpperCase() || "A"}
             </div>
             {sidebarOpen && (
               <div className="ml-3">
-                <p className="font-semibold text-sm">{user?.name}</p>
+                <p className="text-sm font-semibold">{user?.name}</p>
                 <p className="text-xs text-pink-100">Administrator</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Menu Items */}
-        <nav className="mt-6 flex flex-col space-y-2 px-2">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveSection(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition duration-200 ${
-                activeSection === item.id
-                  ? "bg-white text-red-600 font-semibold"
-                  : "text-white hover:bg-red-500"
-              }`}
-            >
-              <span className="text-xl">{item.icon}</span>
-              {sidebarOpen && <span>{item.label}</span>}
-            </button>
-          ))}
+        <nav className="mt-6 flex flex-1 flex-col space-y-2 px-2">
+          {menuItems.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveSection(item.id)}
+                className={`flex w-full items-center space-x-3 rounded-lg px-4 py-3 text-left transition duration-300 transform hover:scale-105 ${
+                  activeSection === item.id
+                    ? "bg-white font-semibold text-red-600 shadow-lg scale-105"
+                    : "text-white hover:bg-red-500"
+                } animate-slideInLeft`}
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
+                <Icon size={18} className="shrink-0 transition duration-300" />
+                {sidebarOpen && <span>{item.label}</span>}
+              </button>
+            );
+          })}
         </nav>
 
-        {/* Logout Button */}
-        <div className="absolute bottom-4 left-0 right-0 px-2">
+        <div className="mt-auto px-2 pb-4 pt-6">
           <button
-            onClick={handleLogout}
-            className={`w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg transition duration-200`}
+            type="button"
+            onClick={() => setShowLogoutConfirm(true)}
+            className="flex w-full items-center justify-center space-x-2 rounded-lg bg-red-700 px-4 py-3 text-white transition duration-200 hover:bg-red-800"
           >
             <LogOut size={18} />
             {sidebarOpen && <span>Logout</span>}
           </button>
         </div>
-      </div>
+      </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-800">
-              {menuItems.find((item) => item.id === activeSection)?.label}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-7xl p-6 md:p-8">
+
+          <div className="mb-8 rounded-[30px] border border-white/70 bg-white/80 px-6 py-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur animate-slideDown">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 transition-all duration-300">
+              {menuItems.find((item) => item.id === activeSection)?.label || "Admin Dashboard"}
             </h2>
-            <p className="text-gray-600 mt-1">Welcome back, {user?.name}!</p>
+            <p className="mt-2 text-slate-600 transition-all duration-300">
+              Welcome back, {user?.name}! Review platform activity, users, and approvals from one place.
+            </p>
           </div>
 
-          {/* Content */}
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            {activeSection === "profile" && <AdminProfile user={user} />}
-            {activeSection === "approvals" && <HackathonApprovals />}
-            {activeSection === "manage" && <ManageUsers user={user} />}
+          <div className="rounded-[32px] border border-white/70 bg-white/85 p-6 shadow-[0_24px_90px_rgba(15,23,42,0.08)] backdrop-blur md:p-8">
+            <AdminSectionErrorBoundary>
+            <div className="animate-fadeIn transition-all duration-500">
+              {activeSection === "overview" && <div className="animate-slideUp"><AdminOverview /></div>}
+              {activeSection === "profile" && <div className="animate-slideUp"><AdminProfile user={user} /></div>}
+              {activeSection === "approvals" && <div className="animate-slideUp"><HackathonApprovals /></div>}
+              {activeSection === "manage" && <div className="animate-slideUp"><ManageUsers user={user} /></div>}
+              {activeSection === "activity" && <div className="animate-slideUp"><AdminActivityLog /></div>}
+            </div>
+            </AdminSectionErrorBoundary>
           </div>
         </div>
       </div>
+
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={confirmLogout}
+      />
     </div>
   );
 };

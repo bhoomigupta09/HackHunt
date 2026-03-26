@@ -1,239 +1,209 @@
-import React, { useState, useMemo } from 'react';
-import {
-  Search,
-  Loader2,
-  Sparkles
-} from 'lucide-react';
-import HackathonCard from '../components/HackathonCard';
-import SearchAndFilter from '../components/SearchAndFilter';
-import WhyChooseHackHunt from '../components/WhyChooseHackHunt';
-import { useHackathons, useHackathonStats } from '../hooks/useHackathons';
+import React from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, ShieldCheck, Users2, Workflow } from "lucide-react";
+import WhyChooseHackHunt from "../components/WhyChooseHackHunt";
+import heroImage from "../assets/hero.png";
 
-// local assets
-import heroImage from '../assets/hero.png';
+const roleCards = [
+  {
+    title: "For Participants",
+    description: "Browse approved hackathons from your dashboard, register faster, and keep track of active events in one place.",
+    cta: "Go to User Login",
+    to: "/login-user",
+    badge: "text-cyan-300",
+    accent: "from-cyan-500/20 to-blue-400/10"
+  },
+  {
+    title: "For Organizers",
+    description: "Create hackathons, submit them for review, and manage event updates from a cleaner organizer workflow.",
+    cta: "Go to Organizer Login",
+    to: "/login-organizer",
+    badge: "text-amber-300",
+    accent: "from-amber-500/20 to-orange-400/10"
+  },
+  {
+    title: "For Admins",
+    description: "Approve submissions, manage users, and monitor platform activity from the admin dashboard.",
+    cta: "Go to Admin Login",
+    to: "/login-admin",
+    badge: "text-rose-300",
+    accent: "from-rose-500/20 to-fuchsia-400/10"
+  }
+];
+
+const steps = [
+  {
+    icon: Workflow,
+    title: "Organizers submit events",
+    description: "Hackathons are created inside HackHunt and routed through a structured approval flow before they go live."
+  },
+  {
+    icon: ShieldCheck,
+    title: "Admins review quality",
+    description: "The admin dashboard approves, rejects, and tracks platform activity so only verified events reach users."
+  },
+  {
+    icon: Users2,
+    title: "Users discover and register",
+    description: "Participants see approved hackathons inside the dashboard only, keeping the landing page focused and clean."
+  }
+];
 
 const Home = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedType, setSelectedType] = useState('');
-
-  const filters = useMemo(
-    () => ({
-      searchTerm: searchTerm || '',
-      status: selectedStatus || '',
-      type: selectedType || ''
-    }),
-    [searchTerm, selectedStatus, selectedType]
-  );
-
-  const {
-    hackathons,
-    total,
-    loading: hackathonsLoading,
-    error: hackathonsError
-  } = useHackathons(filters);
-
-  const {
-    stats,
-    loading: statsLoading,
-    error: statsError
-  } = useHackathonStats();
-
-  const defaultStats = {
-    total: 0,
-    upcoming: 0,
-    ongoing: 0,
-    ended: 0,
-    totalPrize: '$0'
-  };
-
-  const displayStats = stats || defaultStats;
-
-  if (hackathonsError || statsError) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">
-          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Search className="h-12 w-12 text-red-400" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Error Loading Data
-          </h3>
-          <p className="text-gray-600 mb-4">
-            {hackathonsError || statsError}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
+    <div className="min-h-screen bg-[#0b0a14] text-white">
+      <section id="explore" className="relative overflow-hidden border-b border-white/8">
         <div className="absolute inset-0">
-          <div className="absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-blue-200/30 blur-3xl" />
-          <div className="absolute right-0 top-24 h-64 w-64 rounded-full bg-purple-200/30 blur-3xl" />
-          <div className="absolute bottom-10 left-10 h-48 w-48 rounded-full bg-indigo-200/30 blur-3xl" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:112px_112px] opacity-35" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_40%,rgba(244,63,94,0.18),transparent_18%),radial-gradient(circle_at_54%_52%,rgba(34,211,238,0.15),transparent_22%),radial-gradient(circle_at_82%_24%,rgba(139,92,246,0.24),transparent_26%),linear-gradient(180deg,#0d0a18_0%,#0b0a14_100%)]" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         </div>
 
-        <style jsx>{`
-          @keyframes fade-up {
-            from {
-              opacity: 0;
-              transform: translateY(24px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          .animate-fade-up {
-            animation: fade-up 0.8s ease-out both;
-          }
-          .animate-fade-up-delayed {
-            animation: fade-up 1s ease-out 0.12s both;
-          }
-        `}</style>
-
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex min-h-[calc(100vh-88px)] flex-col items-center justify-between gap-12 py-16 md:flex-row md:gap-16 md:py-24">
-            <div className="animate-fade-up flex w-full max-w-xl flex-col items-start justify-center text-left md:w-[45%]">
-              <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-4 py-1 text-sm font-medium text-purple-600 shadow-sm">
-                <Sparkles className="h-4 w-4" />
-                Discover amazing opportunities
-              </div>
-
-              <div className="mt-6 space-y-5">
-              <h1 className="max-w-lg text-5xl font-extrabold leading-tight tracking-[-0.04em] text-slate-900 md:text-6xl lg:text-7xl">
+        <div className="relative mx-auto max-w-screen-xl px-6 py-16 sm:py-20 lg:py-24">
+          <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+            <div>
+              <h1 className="max-w-4xl text-5xl font-black leading-[0.92] tracking-[-0.06em] text-white sm:text-6xl lg:text-[7rem]">
                 Discover
-                <span className="mt-2 block bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+                <span className="mt-2 block bg-gradient-to-r from-violet-300 via-blue-300 to-cyan-300 bg-clip-text text-transparent">
                   Hackathons
                 </span>
               </h1>
 
-              <p className="mt-2 text-lg font-medium text-slate-700 md:text-xl">
+              <p className="mt-6 max-w-2xl text-lg leading-9 text-slate-300 sm:text-xl">
+                Enter HackHunt through a sharper front page, then move into role-based dashboards where the real hackathon workflow stays live, useful, and connected.
+              </p>
+
+              <p className="mt-8 text-lg font-semibold uppercase tracking-[0.26em] text-slate-500">
                 Build. Compete. Win.
               </p>
 
-              <p className="max-w-lg text-base leading-relaxed text-gray-600 md:text-lg">
-                Explore and participate in hackathons from top platforms worldwide.
-                Build innovative solutions, connect with fellow developers, and
-                turn your next idea into something worth shipping.
-              </p>
-              </div>
-
-              <div className="mt-6 flex items-center">
-                <a
-                  href="#hackathons"
-                  className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-blue-600/20 transition duration-300 hover:scale-105 hover:bg-blue-700"
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link
+                  to="/login-user"
+                  className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-violet-600 to-blue-500 px-8 py-4 text-base font-semibold text-white shadow-[0_18px_50px_rgba(99,102,241,0.35)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(99,102,241,0.45)]"
                 >
                   Explore Hackathons
-                  <span className="ml-2" aria-hidden="true">&rarr;</span>
-                </a>
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+                <Link
+                  to="/signup-organizer"
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-8 py-4 text-base font-semibold text-slate-200 transition duration-300 hover:border-white/20 hover:bg-white/[0.06]"
+                >
+                  Create as Organizer
+                </Link>
               </div>
             </div>
 
-            <div className="animate-fade-up-delayed flex w-full justify-center md:w-[55%] md:justify-end">
-              <div className="group relative w-full">
-                <div className="absolute inset-y-10 right-0 hidden w-[88%] rounded-full bg-gradient-to-r from-blue-200/40 via-purple-200/40 to-indigo-200/40 blur-3xl md:block" />
-                <img
-                  src={heroImage}
-                  alt="Team collaborating"
-                  className="relative h-auto w-full max-w-none object-contain transition duration-300 group-hover:scale-105 md:scale-110 md:translate-x-6 lg:scale-[1.18]"
-                />
+            <div className="relative min-h-[520px]">
+              <div className="absolute right-0 top-2 h-96 w-96 rounded-full bg-violet-500/15 blur-3xl" />
+              <div className="absolute bottom-8 left-8 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
+
+              <div className="absolute right-0 top-0 w-full max-w-[42rem] rounded-[2.2rem] border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.45)] backdrop-blur-xl">
+                <div className="rounded-[1.9rem] bg-[linear-gradient(135deg,rgba(91,33,182,0.22),rgba(15,23,42,0.65),rgba(34,211,238,0.16))] p-5">
+                  <img
+                    src={heroImage}
+                    alt="Hackathon participants collaborating around laptops"
+                    className="h-[26rem] w-full rounded-[1.5rem] object-cover lg:h-[30rem]"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
+      <section id="for-organizers" className="relative py-10 sm:py-12">
+        <div className="mx-auto max-w-screen-xl px-6">
+          <div className="grid gap-5 lg:grid-cols-3">
+            {roleCards.map((item) => (
+              <article
+                key={item.title}
+                className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_55px_rgba(2,6,23,0.28)] transition duration-300 hover:-translate-y-1"
+              >
+                <div className={`inline-flex rounded-full bg-gradient-to-r px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${item.accent} ${item.badge}`}>
+                  Role
+                </div>
+                <h3 className="mt-5 text-2xl font-bold tracking-tight text-white">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-slate-300">{item.description}</p>
+                <Link to={item.to} className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
+                  {item.cta}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <WhyChooseHackHunt />
 
-      {/* Hackathons List Section */}
-      <div
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16"
-        id="hackathons"
-      >
-        <div id="filter" className="mb-8">
-          <SearchAndFilter
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            selectedStatus={selectedStatus}
-            onStatusChange={setSelectedStatus}
-            selectedType={selectedType}
-            onTypeChange={setSelectedType}
-          />
-        </div>
-
-        {/* Results */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {hackathonsLoading ? (
-              <div className="flex items-center">
-                <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                Loading Hackathons...
+      <section id="how-it-works" className="relative bg-[#0d0c18] py-10 sm:py-14">
+        <div className="mx-auto max-w-screen-xl px-6">
+          <div className="rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] p-8 shadow-[0_24px_80px_rgba(2,6,23,0.35)] backdrop-blur sm:p-10">
+            <div className="max-w-3xl">
+              <div className="inline-flex rounded-full bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">
+                How It Works
               </div>
-            ) : total === hackathons.length ? (
-              'All Hackathons'
-            ) : (
-              `Found ${hackathons.length} hackathon${
-                hackathons.length !== 1 ? 's' : ''
-              }`
-            )}
-          </h2>
-          <p className="text-gray-600">
-            {hackathonsLoading
-              ? 'Fetching the latest hackathons...'
-              : 'Showing the latest hackathons from various platforms'}
-          </p>
-        </div>
-
-        {/* Hackathon Grid */}
-        {hackathonsLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse"
-              >
-                <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
-                <div className="h-6 bg-gray-200 rounded mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : hackathons.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {hackathons.map((hackathon) => (
-              <HackathonCard key={hackathon.id} hackathon={hackathon} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="h-12 w-12 text-gray-400" />
+              <h2 className="mt-5 text-4xl font-bold tracking-[-0.04em] text-white sm:text-5xl">
+                Everything you need to compete and win
+              </h2>
+              <p className="mt-4 text-base leading-8 text-slate-300 sm:text-lg">
+                The homepage introduces the platform clearly. The real hackathon data and actions stay inside role-specific dashboards where they belong.
+              </p>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No hackathons found
-            </h3>
-            <p className="text-gray-600">
-              Try adjusting your search criteria or filters
-            </p>
+
+            <div className="mt-10 grid gap-6 lg:grid-cols-3">
+              {steps.map((step) => {
+                const Icon = step.icon;
+                return (
+                  <article
+                    key={step.title}
+                    className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_12px_32px_rgba(2,6,23,0.24)] transition duration-300 hover:-translate-y-1 hover:bg-white/[0.06]"
+                  >
+                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-blue-600 text-white shadow-md">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="mt-5 text-xl font-semibold tracking-tight text-white">{step.title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-slate-300">{step.description}</p>
+                  </article>
+                );
+              })}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      </section>
+
+      <section className="border-t border-white/8 bg-[#0a0912] pb-16 pt-8 sm:pb-20">
+        <div className="mx-auto max-w-screen-xl px-6">
+          <div className="rounded-[34px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.18),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] p-8 shadow-[0_22px_70px_rgba(2,6,23,0.35)] sm:p-10">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-2xl">
+                <h2 className="text-3xl font-bold tracking-[-0.04em] text-white sm:text-4xl">
+                  Ready to get started?
+                </h2>
+                <p className="mt-3 text-base leading-8 text-slate-300">
+                  Sign in to your role-specific dashboard and move from discovery into action without exposing dashboard data on the public homepage.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <Link
+                  to="/signup-user"
+                  className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-violet-600 to-blue-500 px-6 py-3.5 text-sm font-semibold text-white shadow-[0_18px_50px_rgba(99,102,241,0.35)] transition hover:-translate-y-0.5"
+                >
+                  Sign up as User
+                </Link>
+                <Link
+                  to="/signup-organizer"
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-3.5 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.06]"
+                >
+                  Sign up as Organizer
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

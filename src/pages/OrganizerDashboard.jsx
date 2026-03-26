@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
 import OrganizerProfile from "../components/Dashboard/OrganizerProfile";
 import ManageHackathons from "../components/Dashboard/ManageHackathons";
+import LogoutConfirmModal from "../components/Dashboard/LogoutConfirmModal";
 
 const OrganizerDashboard = () => {
   const [activeSection, setActiveSection] = useState("profile");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [user, setUser] = useState(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,7 +30,7 @@ const OrganizerDashboard = () => {
     });
   }, [navigate]);
 
-  const handleLogout = () => {
+  const confirmLogout = () => {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userId");
     localStorage.removeItem("userRole");
@@ -43,12 +45,12 @@ const OrganizerDashboard = () => {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_24%),linear-gradient(180deg,#fff7ed,#fffbeb_48%,#f8fafc)]">
       {/* Sidebar */}
       <div
         className={`${
           sidebarOpen ? "w-64" : "w-20"
-        } bg-gradient-to-b from-amber-500 to-orange-600 text-white transition-all duration-300 shadow-lg`}
+        } relative flex flex-col overflow-y-auto border-r border-white/20 bg-gradient-to-b from-amber-500 via-orange-500 to-rose-500 text-white transition-all duration-300 shadow-2xl`}
       >
         {/* Header */}
         <div className="p-4 flex items-center justify-between">
@@ -79,7 +81,7 @@ const OrganizerDashboard = () => {
         </div>
 
         {/* Menu Items */}
-        <nav className="mt-6 flex flex-col space-y-2 px-2">
+        <nav className="mt-6 flex flex-1 flex-col space-y-2 px-2">
           {menuItems.map((item) => (
             <button
               key={item.id}
@@ -97,9 +99,9 @@ const OrganizerDashboard = () => {
         </nav>
 
         {/* Logout Button */}
-        <div className="absolute bottom-4 left-0 right-0 px-2">
+        <div className="mt-auto px-2 pb-4 pt-6">
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className={`w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-200`}
           >
             <LogOut size={18} />
@@ -109,23 +111,29 @@ const OrganizerDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-7xl p-6 md:p-8">
           {/* Header */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-800">
+          <div className="mb-8 rounded-[30px] border border-white/70 bg-white/80 px-6 py-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900">
               {menuItems.find((item) => item.id === activeSection)?.label}
             </h2>
-            <p className="text-gray-600 mt-1">Welcome back, {user?.name}!</p>
+            <p className="mt-2 text-slate-600">Welcome back, {user?.name}! Organizer updates go live across the platform.</p>
           </div>
 
           {/* Content */}
-          <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="rounded-[32px] border border-white/70 bg-white/85 p-6 shadow-[0_24px_90px_rgba(15,23,42,0.08)] backdrop-blur md:p-8">
             {activeSection === "profile" && <OrganizerProfile user={user} />}
             {activeSection === "manage" && <ManageHackathons user={user} />}
           </div>
         </div>
       </div>
+
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={confirmLogout}
+      />
     </div>
   );
 };

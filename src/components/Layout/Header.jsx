@@ -1,13 +1,16 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
-import { Rocket, User, Settings2, ShieldCheck, UserPlus, Hammer } from 'lucide-react';
+import { User, Settings2, ShieldCheck, UserPlus, Hammer } from 'lucide-react';
 import NavbarDropdownButton from '../NavbarDropdownButton';
 // logo image
 import logoImg from '../../assets/logo.png';
 
 
 const Header = () => {
+  const { pathname } = useLocation();
+  const isHomePage = pathname === '/';
+
   // prepare menu items for login and signup
   const loginItems = [
     {
@@ -51,24 +54,42 @@ const Header = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-md shadow-md border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <header
+      className={`sticky top-0 z-50 border-b backdrop-blur-xl ${
+        isHomePage
+          ? 'border-white/8 bg-[#0d0a18]/85 shadow-[0_18px_45px_rgba(3,7,18,0.45)]'
+          : 'border-white/60 bg-white/75 shadow-[0_12px_40px_rgba(15,23,42,0.08)]'
+      }`}
+    >
+      <div className="mx-auto max-w-screen-xl px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           {/* Left side - Logo and text */}
           <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-3 group">
-              <div className="h-9 w-auto">
+            <Link to="/" className="group flex items-center space-x-3">
+              <div className="h-14 w-auto transition duration-300 group-hover:scale-110">
                 <img src={logoImg} alt="HackHunt logo" className="h-full w-auto object-contain" />
               </div>
-              <span className="text-2xl font-extrabold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                HackHunt
-              </span>
+              <div>
+                <span className={`text-4xl font-extrabold bg-gradient-to-r bg-clip-text text-transparent ${
+                  isHomePage
+                    ? 'from-white via-violet-100 to-cyan-200'
+                    : 'from-violet-600 via-purple-600 to-blue-600'
+                }`}>
+                  HackHunt
+                </span>
+              </div>
             </Link>
           </div>
 
-          {/* Right side - Login and Sign up */}
-          <nav className="flex items-center space-x-3 sm:space-x-4">
-            <NavbarDropdownButton label="Login" items={loginItems} variant="filled" />
+          <nav className="hidden items-center gap-10 lg:flex">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <NavbarDropdownButton label="Login" items={loginItems} variant={isHomePage ? 'ghost-dark' : 'filled'} />
+              <NavbarDropdownButton label="Sign up" items={signupItems} variant="filled" />
+            </div>
+          </nav>
+
+          <nav className="flex items-center space-x-3 lg:hidden">
+            <NavbarDropdownButton label="Login" items={loginItems} variant={isHomePage ? 'ghost-dark' : 'filled'} />
             <NavbarDropdownButton label="Sign up" items={signupItems} variant="filled" />
           </nav>
         </div>

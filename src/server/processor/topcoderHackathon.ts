@@ -2,7 +2,7 @@ import { Hackathon } from '../../types/hackathon'; // Assuming the interface is 
 import { parseJsonArrayFromMarkdown } from '../../utils/stringUtils';
 import { getMindsDBConnection } from '../../api/database';
 
-export function parseHackathons(jsonData: any[]): Promise<[] {
+export function parseHackathons(jsonData: any[]): Promise<Hackathon[]> {
   return Promise.all(jsonData.map(async item => {
     const hackathon: Hackathon = {
       id: 'tc-' + item.id,

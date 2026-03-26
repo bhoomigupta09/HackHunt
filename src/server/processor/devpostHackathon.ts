@@ -1,7 +1,7 @@
 import { Hackathon } from '../../types/hackathon';
 import { closeMindsDBConnection, getMindsDBConnection } from '../../api/database';
 
-export async function parseHackathons(jsonData: any): Promise([]) {
+export async function parseHackathons(jsonData: any): Promise<Hackathon[]> {
   if (!jsonData || !jsonData.hackathons || !Array.isArray(jsonData.hackathons)) {
     console.error('Invalid Devpost JSON data:', jsonData);
     return [];
@@ -91,15 +91,18 @@ async function fetchDescription(url: string): Promise<string> {
     return description;
 }
 
-async function fetchTags(description: string): Promise<string> {
-  let tags = [];
+async function fetchTags(description: string): Promise<string[]> {
+  let tags: string[] = [];
   try {
     const connection = await getMindsDBConnection();
   
     const query = "SELECT tag FROM tag_generation_model where description = ?";
     const [rows] = await connection.query(query, [description]);
     if (Array.isArray(rows) && rows.length > 0 && rows[0] != null && typeof rows[0] === 'object' && 'tag' in rows[0]) {
-      tags = rows[0].tag;
+      tags = String(rows[0].tag || "")
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
     }
   } catch (error) {
     console.error('Error fetching description from MindsDB:', error);

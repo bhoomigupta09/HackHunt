@@ -4,8 +4,8 @@ import { apiClient } from "../api/client";
 import { Eye, EyeOff } from "lucide-react";
 
 const LoginOrganizer = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("organizer@hackhunt.com");
+  const [password, setPassword] = useState("Organizer@123");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -43,22 +43,22 @@ const LoginOrganizer = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-amber-900 to-slate-900">
+      <div className="w-full max-w-md bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
         
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white text-2xl">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white text-2xl shadow-lg">
             ⚙️
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Organizer Login</h1>
-          <p className="text-gray-600 mt-2">Manage your hackathons and reach participants</p>
+          <h1 className="text-3xl font-bold text-white">Organizer Login</h1>
+          <p className="text-slate-300 mt-2">Manage your hackathons and reach participants</p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-start space-x-2">
+            <div className="bg-red-900 bg-opacity-30 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm flex items-start space-x-2">
               <span className="mt-0.5">⚠️</span>
               <span>{error}</span>
             </div>
@@ -66,7 +66,7 @@ const LoginOrganizer = () => {
 
           {/* Email Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-200 mb-2">
               Email Address
             </label>
             <input
@@ -74,14 +74,14 @@ const LoginOrganizer = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="organizer@company.com"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
+              className="w-full px-4 py-2 border border-slate-600 rounded-lg bg-slate-700 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
               disabled={loading}
             />
           </div>
 
           {/* Password Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-200 mb-2">
               Password
             </label>
             <div className="relative">
@@ -90,13 +90,13 @@ const LoginOrganizer = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
+                className="w-full px-4 py-2 border border-slate-600 rounded-lg bg-slate-700 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
                 disabled={loading}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-200"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -105,11 +105,11 @@ const LoginOrganizer = () => {
 
           {/* Remember Me & Forgot Password */}
           <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center space-x-2 text-gray-700">
-              <input type="checkbox" className="rounded" />
+            <label className="flex items-center space-x-2 text-slate-300">
+              <input type="checkbox" className="rounded bg-slate-700 border-slate-600" />
               <span>Remember me</span>
             </label>
-            <Link to={`/forgot-password?role=organizer&email=${encodeURIComponent(email)}`} className="text-amber-600 hover:text-amber-700 font-medium">
+            <Link to={`/forgot-password?role=organizer&email=${encodeURIComponent(email)}`} className="text-amber-400 hover:text-amber-300 font-medium">
               Forgot password?
             </Link>
           </div>
@@ -124,36 +124,10 @@ const LoginOrganizer = () => {
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">or continue as</span>
-          </div>
-        </div>
-
-        {/* Role Links */}
-        <div className="space-y-2">
-          <Link
-            to="/login-user"
-            className="w-full block text-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-          >
-            👤 Login as User
-          </Link>
-          <Link
-            to="/login-admin"
-            className="w-full block text-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-          >
-            🛡️ Login as Admin
-          </Link>
-        </div>
-
         {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-600">
+        <div className="mt-8 text-center text-sm text-slate-400">
           Don't have an account?{" "}
-          <Link to="/signup-organizer" className="text-amber-600 hover:text-amber-700 font-semibold">
+          <Link to="/signup-organizer" className="text-amber-400 hover:text-amber-300 font-semibold">
             Sign up here
           </Link>
         </div>

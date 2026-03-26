@@ -136,16 +136,28 @@
 
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
 import MyProfile from "../components/Dashboard/MyProfile";
 import BrowseHackathons from "../components/Dashboard/BrowseHackathons";
 import RegisteredHackathons from "../components/Dashboard/RegisteredHackathons";
+import HackathonTrackingMap from "../components/HackathonTrackingMap";
+import LogoutConfirmModal from "../components/Dashboard/LogoutConfirmModal";
 
 const UserDashboard = () => {
-  const [activeSection, setActiveSection] = useState("profile");
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const sectionFromQuery = params.get("section");
+  const locationFromQuery = params.get("location") || "";
+  const defaultSection =
+    sectionFromQuery && ["profile", "browse", "registered", "track"].includes(sectionFromQuery)
+      ? sectionFromQuery
+      : "profile";
+
+  const [activeSection, setActiveSection] = useState(defaultSection);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [user, setUser] = useState({ name: "User", role: "user", id: "" }); // Default values set kar di
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -167,7 +179,22 @@ const UserDashboard = () => {
     });
   }, [navigate]);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    if (sectionFromQuery && ["profile", "browse", "registered", "track"].includes(sectionFromQuery)) {
+      setActiveSection(sectionFromQuery);
+    }
+  }, [sectionFromQuery]);
+
+  const switchSection = (sectionId) => {
+    setActiveSection(sectionId);
+    if (sectionId === "browse" && locationFromQuery) {
+      navigate(`/dashboard/user?section=${sectionId}&location=${encodeURIComponent(locationFromQuery)}`);
+      return;
+    }
+    navigate(`/dashboard/user?section=${sectionId}`);
+  };
+
+  const confirmLogout = () => {
     localStorage.clear(); // Saara kachra ek saath saaf
     navigate("/");
   };
@@ -175,16 +202,17 @@ const UserDashboard = () => {
   const menuItems = [
     { id: "profile", label: "My Profile", icon: "👤" },
     { id: "browse", label: "Browse Hackathons", icon: "🔍" },
-    { id: "registered", label: "My Registrations", icon: "✅" }
+    { id: "registered", label: "My Registrations", icon: "✅" },
+    { id: "track", label: "Track Hackathons", icon: "🗺️" }
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.16),transparent_24%),linear-gradient(180deg,#f8fafc,#eef2ff_48%,#f8fafc)]">
       {/* Sidebar */}
       <div
         className={`${
           sidebarOpen ? "w-64" : "w-20"
-        } bg-gradient-to-b from-purple-600 to-purple-800 text-white transition-all duration-300 shadow-lg relative`}
+        } relative flex flex-col overflow-y-auto border-r border-white/20 bg-gradient-to-b from-violet-700 via-purple-600 to-indigo-700 text-white transition-all duration-300 shadow-2xl`}
       >
         {/* Header */}
         <div className="p-4 flex items-center justify-between">
@@ -215,11 +243,11 @@ const UserDashboard = () => {
         </div>
 
         {/* Menu Items */}
-        <nav className="mt-6 flex flex-col space-y-2 px-2">
+        <nav className="mt-6 flex flex-1 flex-col space-y-2 px-2">
           {menuItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveSection(item.id)}
+              onClick={() => switchSection(item.id)}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition duration-200 ${
                 activeSection === item.id
                   ? "bg-white text-purple-600 font-semibold"
@@ -233,9 +261,9 @@ const UserDashboard = () => {
         </nav>
 
         {/* Logout Button */}
-        <div className="absolute bottom-4 left-0 right-0 px-2">
+        <div className="mt-auto px-2 pb-4 pt-6">
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className={`w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-200`}
           >
             <LogOut size={18} />
@@ -245,24 +273,31 @@ const UserDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-7xl p-6 md:p-8">
           {/* Header */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-800">
+          <div className="mb-8 rounded-[30px] border border-white/70 bg-white/80 px-6 py-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900">
               {menuItems.find((item) => item.id === activeSection)?.label}
             </h2>
-            <p className="text-gray-600 mt-1">Welcome back, {user?.name || "User"}!</p>
+            <p className="mt-2 text-slate-600">Welcome back, {user?.name || "User"}! Explore approved hackathons and manage your profile here.</p>
           </div>
 
           {/* Content */}
-          <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="rounded-[32px] border border-white/70 bg-white/85 p-6 shadow-[0_24px_90px_rgba(15,23,42,0.08)] backdrop-blur md:p-8">
             {activeSection === "profile" && <MyProfile user={user} />}
-            {activeSection === "browse" && <BrowseHackathons user={user} />}
+            {activeSection === "browse" && <BrowseHackathons user={user} initialSearchTerm={locationFromQuery} />}
             {activeSection === "registered" && <RegisteredHackathons user={user} />}
+            {activeSection === "track" && <HackathonTrackingMap />}
           </div>
         </div>
       </div>
+
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={confirmLogout}
+      />
     </div>
   );
 };

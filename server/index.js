@@ -7,6 +7,7 @@ const { userRouter } = require("./database/user");
 const { adminRouter } = require("./routes/admin");
 const forgotPasswordRoutes = require("./routes/forgotPassword");
 const hackathonRoutes = require("./routes/hackathonRoutes");
+const { realtimeRouter } = require("./routes/realtime");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -22,7 +23,7 @@ app.use(
       "http://localhost:3000"
     ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
@@ -42,23 +43,40 @@ app.use("/api/v1/user", userRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/forgot-password", forgotPasswordRoutes);
 app.use("/api/v1/hackathons", hackathonRoutes);
+app.use("/api/v1/realtime", realtimeRouter);
 app.use("/api/hackathons", hackathonRoutes);
 
 async function startServer() {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/api/v1/health`);
+  });
+
+  let connected = false;
   try {
     await mongoose.connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 5000
     });
     console.log(`MongoDB connected: ${MONGODB_URI}`);
+    connected = true;
   } catch (error) {
     console.error("MongoDB connection failed:", error.message);
-    console.error("Continuing without a live database connection.");
+    const fallbackUri = "mongodb://127.0.0.1:27017/project1";
+    if (MONGODB_URI !== fallbackUri) {
+      try {
+        await mongoose.connect(fallbackUri, {
+          serverSelectionTimeoutMS: 5000
+        });
+        console.log(`MongoDB fallback connected: ${fallbackUri}`);
+        connected = true;
+      } catch (fallbackError) {
+        console.error("MongoDB fallback failed:", fallbackError.message);
+      }
+    }
+    if (!connected) {
+      console.error("Continuing without a live database connection.");
+    }
   }
-
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Health check: http://localhost:${PORT}/api/v1/health`);
-  });
 }
 
 startServer();

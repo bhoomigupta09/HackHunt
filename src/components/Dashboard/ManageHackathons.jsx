@@ -1,83 +1,116 @@
-import React, { useState } from "react";
-import { Plus, Edit2, Trash2, Eye, Calendar, Users, MapPin } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Calendar, Edit2, Plus, Trash2, Users } from "lucide-react";
+import { apiClient } from "../../api/client";
+import { useRealtimeStream } from "../../hooks/useRealtimeStream";
+import LocationMapInput from "../LocationMapInput";
+
+const initialFormData = {
+  title: "",
+  description: "",
+  startDate: "",
+  endDate: "",
+  location: "",
+  address: "",
+  latitude: 51.505,
+  longitude: -0.09,
+  mode: "online",
+  maxParticipants: 100,
+  prize: "",
+  imageUrl: "",
+  registrationUrl: "",
+  tags: ""
+};
+
+const approvalTone = {
+  pending: "bg-amber-100 text-amber-700",
+  approved: "bg-emerald-100 text-emerald-700",
+  rejected: "bg-red-100 text-red-700"
+};
+
+const todayDate = () => new Date().toISOString().slice(0, 10);
 
 const ManageHackathons = ({ user }) => {
-  const [hackathons, setHackathons] = useState([
-    {
-      id: 1,
-      title: "Web Dev Challenge 2026",
-      description: "Build amazing web applications",
-      startDate: "2026-02-15",
-      endDate: "2026-02-17",
-      location: "Virtual",
-      participants: 45,
-      maxParticipants: 100,
-      status: "active",
-      prize: "$5000"
-    },
-    {
-      id: 2,
-      title: "AI Innovation Summit",
-      description: "Explore AI and machine learning innovations",
-      startDate: "2026-03-01",
-      endDate: "2026-03-03",
-      location: "San Francisco, CA",
-      participants: 38,
-      maxParticipants: 80,
-      status: "active",
-      prize: "$10000"
-    },
-    {
-      id: 3,
-      title: "Mobile App Sprint",
-      description: "Create mobile apps in 24 hours",
-      startDate: "2026-01-10",
-      endDate: "2026-01-11",
-      location: "Virtual",
-      participants: 62,
-      maxParticipants: 120,
-      status: "completed",
-      prize: "$3000"
-    }
-  ]);
-
+  const [hackathons, setHackathons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    startDate: "",
-    endDate: "",
-    location: "",
-    maxParticipants: "",
-    prize: ""
+  const [editingHackathon, setEditingHackathon] = useState(null);
+  const [formData, setFormData] = useState(initialFormData);
+  const [submitting, setSubmitting] = useState(false);
+
+  const organizerId = localStorage.getItem("userId");
+
+  const fetchHackathons = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await apiClient.getOrganizerHackathons(organizerId);
+      setHackathons(response.hackathons || []);
+    } catch (err) {
+      setError(err.message || "Failed to load organizer hackathons.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (organizerId) {
+      fetchHackathons();
+    }
+  }, [organizerId]);
+
+  useRealtimeStream({
+    "hackathon:created": fetchHackathons,
+    "hackathon:updated": fetchHackathons,
+    "hackathon:deleted": fetchHackathons,
+    "hackathon:approval-updated": fetchHackathons,
+    "registration:created": fetchHackathons,
+    "registration:deleted": fetchHackathons
   });
 
+  const stats = useMemo(
+    () => ({
+      total: hackathons.length,
+      pending: hackathons.filter((item) => item.approvalStatus === "pending").length,
+      approved: hackathons.filter((item) => item.approvalStatus === "approved").length
+    }),
+    [hackathons]
+  );
+
   const handleOpenForm = (hackathon = null) => {
-    if (hackathon) {
-      setEditingId(hackathon.id);
-      setFormData({
-        title: hackathon.title,
-        description: hackathon.description,
-        startDate: hackathon.startDate,
-        endDate: hackathon.endDate,
-        location: hackathon.location,
-        maxParticipants: hackathon.maxParticipants,
-        prize: hackathon.prize
-      });
-    } else {
-      setEditingId(null);
-      setFormData({
-        title: "",
-        description: "",
-        startDate: "",
-        endDate: "",
-        location: "",
-        maxParticipants: "",
-        prize: ""
-      });
-    }
+    setEditingHackathon(hackathon);
+    setFormData(
+      hackathon
+        ? {
+            title: hackathon.title || "",
+            description: hackathon.description || "",
+            startDate: hackathon.startDate?.slice(0, 10) || "",
+            endDate: hackathon.endDate?.slice(0, 10) || "",
+            location: hackathon.location || "",
+            address: hackathon.address || "",
+            latitude: hackathon.latitude || 51.505,
+            longitude: hackathon.longitude || -0.09,
+            mode: hackathon.mode || "online",
+            maxParticipants: hackathon.maxParticipants || 100,
+            prize: hackathon.prize || "",
+            imageUrl: hackathon.imageUrl || "",
+            registrationUrl: hackathon.registrationUrl || "",
+            tags: (hackathon.tags || []).join(", ")
+          }
+        : initialFormData
+    );
     setShowModal(true);
+  };
+
+  const handleLocationChange = (locationData) => {
+    setFormData(prev => ({
+      ...prev,
+      location: locationData.address ?? prev.location,
+      address: locationData.address ?? prev.address,
+      latitude: locationData.latitude ?? prev.latitude,
+      longitude: locationData.longitude ?? prev.longitude
+    }));
   };
 
   const handleInputChange = (e) => {
@@ -85,301 +118,322 @@ const ManageHackathons = ({ user }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmitForm = () => {
-    if (editingId) {
-      // Update existing hackathon
-      setHackathons((prev) =>
-        prev.map((h) =>
-          h.id === editingId
-            ? { ...h, ...formData }
-            : h
-        )
-      );
-    } else {
-      // Create new hackathon
-      setHackathons((prev) => [
-        ...prev,
-        {
-          id: Math.max(...prev.map((h) => h.id), 0) + 1,
-          ...formData,
-          participants: 0,
-          status: "active"
-        }
-      ]);
+  const handleSubmitForm = async () => {
+    try {
+      setSubmitting(true);
+      setError("");
+      setSuccess("");
+
+      if (!formData.title || !formData.description || !formData.startDate || !formData.endDate || !formData.location) {
+        setError("Please fill in all required fields before submitting.");
+        setSubmitting(false);
+        return;
+      }
+
+      if (formData.startDate < todayDate()) {
+        setError("Start date must be today or later so users can see a valid upcoming event.");
+        setSubmitting(false);
+        return;
+      }
+
+      if (formData.endDate < formData.startDate) {
+        setError("End date must be the same as or after the start date.");
+        setSubmitting(false);
+        return;
+      }
+
+      const payload = {
+        ...formData,
+        organizerId,
+        maxParticipants: Number(formData.maxParticipants) || 100
+      };
+
+      if (editingHackathon) {
+        await apiClient.updateHackathon(editingHackathon._id, payload);
+        setSuccess("Hackathon updated and resubmitted for approval.");
+      } else {
+        await apiClient.createHackathon(payload);
+        setSuccess("Hackathon created and sent for admin approval.");
+      }
+
+      setShowModal(false);
+      setFormData(initialFormData);
+      setEditingHackathon(null);
+      setTimeout(() => setSuccess(""), 3000);
+      await fetchHackathons();
+    } catch (err) {
+      setError(err.message || "Failed to save hackathon.");
+    } finally {
+      setSubmitting(false);
     }
-    setShowModal(false);
   };
 
-  const handleDeleteHackathon = (id) => {
-    if (window.confirm("Are you sure you want to delete this hackathon?")) {
-      setHackathons((prev) => prev.filter((h) => h.id !== id));
+  const handleDeleteHackathon = async (id) => {
+    if (!window.confirm("Delete this hackathon from the platform?")) {
+      return;
+    }
+
+    try {
+      await apiClient.deleteHackathon(id, organizerId);
+      setSuccess("Hackathon deleted successfully.");
+      setTimeout(() => setSuccess(""), 3000);
+      await fetchHackathons();
+    } catch (err) {
+      setError(err.message || "Failed to delete hackathon.");
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-800";
-      case "completed":
-        return "bg-gray-100 text-gray-800";
-      case "upcoming":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  if (loading) {
+    return <div className="py-16 text-center text-slate-500">Loading your hackathons...</div>;
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="text-2xl font-bold text-gray-800">Manage Hackathons</h3>
-          <p className="text-gray-600 mt-1">Create, edit, and manage your hackathons</p>
+    <div className="space-y-8">
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
         </div>
-        <button
-          onClick={() => handleOpenForm()}
-          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg hover:from-amber-600 hover:to-orange-700 transition duration-200"
-        >
-          <Plus size={18} />
-          <span>New Hackathon</span>
-        </button>
-      </div>
+      )}
 
-      {/* Hackathons List */}
-      <div className="grid grid-cols-1 gap-4">
-        {hackathons.length > 0 ? (
-          hackathons.map((hackathon) => (
-            <div
-              key={hackathon.id}
-              className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition duration-200"
-            >
-              {/* Title and Status */}
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <h4 className="text-lg font-bold text-gray-800">{hackathon.title}</h4>
-                  <p className="text-gray-600 text-sm mt-1">{hackathon.description}</p>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${getStatusColor(hackathon.status)}`}>
-                  {hackathon.status}
-                </span>
-              </div>
+      {success && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {success}
+        </div>
+      )}
 
-              {/* Details Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                {/* Date */}
-                <div className="flex items-center space-x-2 text-gray-600">
-                  <Calendar size={16} className="text-orange-500" />
-                  <div className="text-sm">
-                    <p className="font-medium">{new Date(hackathon.startDate).toLocaleDateString()}</p>
-                    <p className="text-xs text-gray-500">Start Date</p>
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div className="flex items-center space-x-2 text-gray-600">
-                  <MapPin size={16} className="text-orange-500" />
-                  <div className="text-sm">
-                    <p className="font-medium">{hackathon.location}</p>
-                    <p className="text-xs text-gray-500">Location</p>
-                  </div>
-                </div>
-
-                {/* Participants */}
-                <div className="flex items-center space-x-2 text-gray-600">
-                  <Users size={16} className="text-orange-500" />
-                  <div className="text-sm">
-                    <p className="font-medium">{hackathon.participants}/{hackathon.maxParticipants}</p>
-                    <p className="text-xs text-gray-500">Participants</p>
-                  </div>
-                </div>
-
-                {/* Prize */}
-                <div className="text-sm">
-                  <p className="font-medium text-gray-800">{hackathon.prize}</p>
-                  <p className="text-xs text-gray-500">Prize Pool</p>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="mb-4">
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-amber-500 to-orange-600 h-2 rounded-full"
-                    style={{ width: `${(hackathon.participants / hackathon.maxParticipants) * 100}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {Math.round((hackathon.participants / hackathon.maxParticipants) * 100)}% filled
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center space-x-2 pt-4 border-t border-gray-200">
-                <button className="flex items-center space-x-1 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
-                  <Eye size={16} />
-                  <span className="text-sm">View</span>
-                </button>
-                <button
-                  onClick={() => handleOpenForm(hackathon)}
-                  className="flex items-center space-x-1 px-3 py-2 text-amber-600 hover:bg-amber-50 rounded-lg transition"
-                >
-                  <Edit2 size={16} />
-                  <span className="text-sm">Edit</span>
-                </button>
-                <button
-                  onClick={() => handleDeleteHackathon(hackathon.id)}
-                  className="flex items-center space-x-1 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                >
-                  <Trash2 size={16} />
-                  <span className="text-sm">Delete</span>
-                </button>
-              </div>
+      <section className="rounded-[30px] border border-amber-100 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_24%),linear-gradient(135deg,#fff7ed,#ffffff)] p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+              Organizer Studio
             </div>
+            <h3 className="mt-4 text-3xl font-bold tracking-[-0.04em] text-slate-950">
+              Build a real hackathon pipeline
+            </h3>
+            <p className="mt-3 text-base leading-7 text-slate-600">
+              Create events, update schedules, and track approvals. Approved hackathons go live for users automatically.
+            </p>
+          </div>
+
+          <button
+            onClick={() => handleOpenForm()}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl transform hover:scale-105"
+          >
+            <Plus size={18} />
+            New Hackathon
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-white/80 bg-white/80 px-4 py-4 hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-slideUp" style={{ animationDelay: '0ms' }}>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Total</div>
+            <div className="mt-2 text-4xl font-bold text-slate-950 transition-all duration-500">{stats.total}</div>
+          </div>
+          <div className="rounded-2xl border border-white/80 bg-white/80 px-4 py-4 hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-slideUp" style={{ animationDelay: '100ms' }}>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-600">Pending</div>
+            <div className="mt-2 text-4xl font-bold text-slate-950 transition-all duration-500">{stats.pending}</div>
+          </div>
+          <div className="rounded-2xl border border-white/80 bg-white/80 px-4 py-4 hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-slideUp" style={{ animationDelay: '200ms' }}>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">Approved</div>
+            <div className="mt-2 text-4xl font-bold text-slate-950 transition-all duration-500">{stats.approved}</div>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-5">
+        {hackathons.length > 0 ? (
+          hackathons.map((hackathon, index) => (
+            <article
+              key={hackathon._id}
+              className="overflow-hidden rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1"
+              style={{ animation: `feature-fade-up 0.55s ease-out ${index * 0.05}s both` }}
+            >
+              <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h4 className="text-2xl font-bold tracking-tight text-slate-950">{hackathon.title}</h4>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${approvalTone[hackathon.approvalStatus] || "bg-slate-100 text-slate-700"}`}>
+                      {hackathon.approvalStatus}
+                    </span>
+                    {hackathon.approvalStatus === "pending" && (
+                      <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                        Waiting for admin approval
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">{hackathon.description}</p>
+
+                  <div className="mt-6 grid gap-4 md:grid-cols-4">
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                      <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <Calendar size={16} />
+                        Start
+                      </div>
+                      <p className="mt-2 font-semibold text-slate-900">
+                        {new Date(hackathon.startDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                      <div className="text-sm text-slate-500">Location</div>
+                      <p className="mt-2 font-semibold text-slate-900">{hackathon.location}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                      <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <Users size={16} />
+                        Participants
+                      </div>
+                      <p className="mt-2 font-semibold text-slate-900">
+                        {hackathon.participants}/{hackathon.maxParticipants}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                      <div className="text-sm text-slate-500">Prize</div>
+                      <p className="mt-2 font-semibold text-slate-900">{hackathon.prize || "TBA"}</p>
+                    </div>
+                  </div>
+
+                  {hackathon.rejectionReason && (
+                    <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      Rejection note: {hackathon.rejectionReason}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 xl:flex-col xl:w-44">
+                  <button
+                    onClick={() => handleOpenForm(hackathon)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 transition-all duration-300 hover:bg-amber-100 hover:shadow-lg transform hover:scale-105"
+                  >
+                    <Edit2 size={16} />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteHackathon(hackathon._id)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition-all duration-300 hover:bg-red-100 hover:shadow-lg transform hover:scale-105"
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </article>
           ))
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-600">No hackathons yet. Create your first one!</p>
+          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-16 text-center text-slate-500">
+            No hackathons yet. Create your first event and send it for admin approval.
           </div>
         )}
       </div>
 
-      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-screen overflow-y-auto">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
-              <h3 className="text-xl font-bold text-gray-800">
-                {editingId ? "Edit Hackathon" : "Create New Hackathon"}
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[30px] border border-white/40 bg-white shadow-2xl">
+            <div className="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-950">
+                  {editingHackathon ? "Edit Hackathon" : "Create Hackathon"}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Changes are synced live after admin approval.
+                </p>
+              </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="rounded-full bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200"
               >
-                ✕
+                Close
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="px-6 py-4 space-y-4">
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Hackathon Title *
-                </label>
+            <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-slate-700">Title</label>
                 <input
                   type="text"
                   name="title"
                   value={formData.title}
                   onChange={handleInputChange}
-                  placeholder="e.g., Web Dev Challenge 2026"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Hackathon title"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-amber-300 focus:bg-white"
                 />
               </div>
 
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description *
-                </label>
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-slate-700">Description</label>
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
-                  placeholder="Describe your hackathon"
-                  rows="3"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  rows="4"
+                  placeholder="Describe your hackathon clearly"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-amber-300 focus:bg-white"
                 />
               </div>
 
-              {/* Dates */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date *
-                  </label>
-                  <input
-                    type="date"
-                    name="startDate"
-                    value={formData.startDate}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Date *
-                  </label>
-                  <input
-                    type="date"
-                    name="endDate"
-                    value={formData.endDate}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-              </div>
-
-              {/* Location */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Location *
-                </label>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Start Date</label>
+                <input type="date" min={todayDate()} name="startDate" value={formData.startDate} onChange={handleInputChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">End Date</label>
+                <input type="date" min={formData.startDate || todayDate()} name="endDate" value={formData.endDate} onChange={handleInputChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Mode</label>
+                <select name="mode" value={formData.mode} onChange={handleInputChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <option value="online">Online</option>
+                  <option value="hybrid">Hybrid</option>
+                  <option value="in-person">In-person</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Max Participants</label>
+                <input type="number" name="maxParticipants" value={formData.maxParticipants} onChange={handleInputChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Prize Pool</label>
+                <input type="text" name="prize" value={formData.prize} onChange={handleInputChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Image URL</label>
+                <input type="text" name="imageUrl" value={formData.imageUrl} onChange={handleInputChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Registration URL</label>
+                <input type="text" name="registrationUrl" value={formData.registrationUrl} onChange={handleInputChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-slate-700">Tags</label>
                 <input
                   type="text"
-                  name="location"
-                  value={formData.location}
+                  name="tags"
+                  value={formData.tags}
                   onChange={handleInputChange}
-                  placeholder="e.g., Virtual or City, Country"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="AI, Web3, Open Source"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
                 />
               </div>
 
-              {/* Max Participants and Prize */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Max Participants *
-                  </label>
-                  <input
-                    type="number"
-                    name="maxParticipants"
-                    value={formData.maxParticipants}
-                    onChange={handleInputChange}
-                    placeholder="100"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prize Pool
-                  </label>
-                  <input
-                    type="text"
-                    name="prize"
-                    value={formData.prize}
-                    onChange={handleInputChange}
-                    placeholder="e.g., $5000"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
+              {/* Location Map Input */}
+              <div className="md:col-span-2">
+                <LocationMapInput onLocationChange={handleLocationChange} />
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 flex space-x-2 justify-end sticky bottom-0 bg-white">
+            <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-white px-6 py-5">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmitForm}
-                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg hover:from-amber-600 hover:to-orange-700 transition"
+                disabled={submitting}
+                className="rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-3 text-sm font-semibold text-white transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {editingId ? "Update" : "Create"} Hackathon
+                {submitting ? "Saving..." : editingHackathon ? "Update Hackathon" : "Create Hackathon"}
               </button>
             </div>
           </div>
