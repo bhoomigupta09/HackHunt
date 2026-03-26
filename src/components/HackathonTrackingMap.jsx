@@ -1,253 +1,200 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Flame, MapPin, Search, X } from "lucide-react";
+import { MapPin, Search, X, Globe, Calendar, Clock, CheckCircle } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { apiClient } from "../api/client";
-import { useRealtimeStream } from "../hooks/useRealtimeStream";
 
-const STATUS_OPTIONS = ["all", "active", "upcoming", "ended", "cancelled"];
+// IMPORT YOUR LOCAL JSON DATA HERE
+import mockHackathons from "../data/unstop_scraped_data.json";
+
+// We will use "ongoing" in UI to match your preference
+const STATUS_OPTIONS = ["all", "ongoing", "upcoming", "ended"];
 
 const normalizeLocation = (value = "") => value.trim().toLowerCase();
+
+// PRE-CACHED COORDINATES FOR INSTANT LOADING
+const KNOWN_CITIES = {
+  "delhi": { lat: 28.6139, lng: 77.2090 },
+  "new delhi": { lat: 28.6139, lng: 77.2090 },
+  "mumbai": { lat: 19.0760, lng: 72.8777 },
+  "dhanbad": { lat: 23.7957, lng: 86.4304 },
+  "bangalore": { lat: 12.9716, lng: 77.5946 },
+  "pune": { lat: 18.5204, lng: 73.8567 },
+  "yelahanka": { lat: 13.1007, lng: 77.5963 },
+  "greater noida": { lat: 28.4744, lng: 77.5040 },
+  "chennai": { lat: 13.0827, lng: 80.2707 },
+  "pilani": { lat: 28.3802, lng: 75.6083 },
+  "ramanagara": { lat: 12.7150, lng: 77.2813 },
+  "navi mumbai": { lat: 19.0330, lng: 73.0297 },
+  "meerut": { lat: 28.9845, lng: 77.7064 },
+  "roorkee": { lat: 29.8543, lng: 77.8880 },
+  "jammu": { lat: 32.7266, lng: 74.8570 },
+  "dharuhera": { lat: 28.2055, lng: 76.7953 },
+  "nashik": { lat: 19.9975, lng: 73.7898 },
+  "kolkata": { lat: 22.5726, lng: 88.3639 },
+  "jaipur": { lat: 26.9124, lng: 75.7873 },
+  "rajasthan": { lat: 26.9124, lng: 75.7873 } // added default for rajasthan state searches
+};
+
 const hasValidCoordinates = (hackathon) =>
   Number.isFinite(Number(hackathon?.latitude)) &&
   Number.isFinite(Number(hackathon?.longitude));
-const toCoordBucket = (latitude, longitude) =>
-  `${Number(latitude).toFixed(3)}:${Number(longitude).toFixed(3)}`;
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const HackathonTrackingMap = () => {
   const [hackathons, setHackathons] = useState([]);
   const [filteredHackathons, setFilteredHackathons] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [searchLocationDraft, setSearchLocationDraft] = useState("");
   const [searchLocation, setSearchLocation] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
-  const [availableLocations, setAvailableLocations] = useState([]);
+  
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef([]);
-  const geocodeCacheRef = useRef(new Map());
-  const navigate = useNavigate();
 
+  // Determine Status
   const getHackathonStatus = useCallback((hackathon) => {
-    const normalized = String(hackathon?.status || "").toLowerCase();
-    if (normalized === "ongoing") return "active";
-    if (normalized === "upcoming") return "upcoming";
-    if (normalized === "ended") return "ended";
-    if (normalized === "cancelled") return "cancelled";
+    try {
+      const cleanStartDateStr = (hackathon.startDate || "").replace("Posted ", "").trim();
+      const start = new Date(cleanStartDateStr);
+      const end = hackathon.endDate ? new Date(hackathon.endDate) : new Date(start.getTime() + (3 * 24 * 60 * 60 * 1000));
+      const now = new Date();
 
-    const now = new Date();
-    const startDate = new Date(hackathon.startDate);
-    const endDate = new Date(hackathon.endDate);
-    if (endDate < now) return "ended";
-    if (startDate <= now && endDate >= now) return "active";
-    return "upcoming";
+      if (!isNaN(end.getTime()) && end < now) return "ended";
+      if (!isNaN(start.getTime()) && start > now) return "upcoming";
+      if (!isNaN(start.getTime()) && start <= now && end >= now) return "ongoing";
+    } catch (e) {}
+    
+    const normalized = String(hackathon?.status || "").toLowerCase();
+    if (normalized === "open" || normalized === "active") return "ongoing";
+    return "ended";
   }, []);
 
-  const resolveCoordinatesForLocation = useCallback(async (location) => {
-    const key = normalizeLocation(location);
-    if (!key) return null;
-    if (geocodeCacheRef.current.has(key)) return geocodeCacheRef.current.get(key);
-
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(location)}`
-      );
-      if (!response.ok) {
-        geocodeCacheRef.current.set(key, null);
-        return null;
+  // AUTO-GEOCODER
+  const autoGeocodeLocations = async (items) => {
+    const updatedItems = [];
+    
+    for (const item of items) {
+      if (hasValidCoordinates(item)) {
+        updatedItems.push(item);
+        continue;
       }
 
-      const results = await response.json();
-      const first = Array.isArray(results) ? results[0] : null;
-      const resolved =
-        first && Number.isFinite(Number(first.lat)) && Number.isFinite(Number(first.lon))
-          ? { latitude: Number(first.lat), longitude: Number(first.lon) }
-          : null;
+      const locStr = (item.location || "").toLowerCase();
+      if (locStr === "online" || locStr === "tba" || !locStr) {
+        updatedItems.push(item);
+        continue;
+      }
 
-      geocodeCacheRef.current.set(key, resolved);
-      return resolved;
-    } catch {
-      geocodeCacheRef.current.set(key, null);
-      return null;
+      // Check predefined fast dictionary first
+      let matched = false;
+      for (const [city, coords] of Object.entries(KNOWN_CITIES)) {
+        if (locStr.includes(city)) {
+          const latOffset = (Math.random() - 0.5) * 0.03; // Spread out pins in same city
+          const lngOffset = (Math.random() - 0.5) * 0.03;
+          updatedItems.push({
+            ...item,
+            latitude: coords.lat + latOffset,
+            longitude: coords.lng + lngOffset
+          });
+          matched = true;
+          break;
+        }
+      }
+
+      if (!matched) {
+        // Fallback to cache/api if not in dictionary
+        const cacheKey = `hackhunt_geo_${normalizeLocation(item.location)}`;
+        const cachedCoordsStr = localStorage.getItem(cacheKey);
+        
+        if (cachedCoordsStr) {
+          const coords = JSON.parse(cachedCoordsStr);
+          if (coords && coords.lat) {
+            updatedItems.push({ ...item, latitude: coords.lat, longitude: coords.lng });
+          } else {
+            updatedItems.push(item);
+          }
+        } else {
+          updatedItems.push(item); // Leave without coords if not cached to avoid blocking UI
+        }
+      }
     }
+    return updatedItems;
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      const formattedMockData = mockHackathons.map((h) => ({
+        ...h,
+        _id: h.id,
+        mode: h.type,
+      }));
+      const enrichedHackathons = await autoGeocodeLocations(formattedMockData);
+      setHackathons(enrichedHackathons);
+      setLoading(false);
+    };
+    loadData();
   }, []);
 
-  const enrichHackathonsWithCoordinates = useCallback(
-    async (items) => {
-      const missingLocations = [
-        ...new Set(
-          items
-            .filter((item) => !hasValidCoordinates(item) && item.location)
-            .map((item) => item.location)
-        )
-      ];
-
-      const resolvedPairs = await Promise.all(
-        missingLocations.map(async (location) => [location, await resolveCoordinatesForLocation(location)])
-      );
-      const resolvedMap = new Map(
-        resolvedPairs.map(([location, coords]) => [normalizeLocation(location), coords])
-      );
-
-      return items.map((item) => {
-        if (hasValidCoordinates(item)) {
-          return {
-            ...item,
-            latitude: Number(item.latitude),
-            longitude: Number(item.longitude)
-          };
-        }
-
-        const resolved = resolvedMap.get(normalizeLocation(item.location));
-        return resolved
-          ? { ...item, latitude: resolved.latitude, longitude: resolved.longitude }
-          : item;
-      });
-    },
-    [resolveCoordinatesForLocation]
-  );
-
-  const loadHackathons = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const response = await apiClient.getHackathons({ limit: 250 });
-      const rawHackathons = response.hackathons || [];
-      const enrichedHackathons = await enrichHackathonsWithCoordinates(rawHackathons);
-      setHackathons(enrichedHackathons);
-    } catch (err) {
-      setHackathons([]);
-      setError(err.message || "Failed to load hackathons");
-    } finally {
-      setLoading(false);
-    }
-  }, [enrichHackathonsWithCoordinates]);
-
-  useEffect(() => {
-    loadHackathons();
-  }, [loadHackathons]);
-
-  useRealtimeStream({
-    "hackathon:created": loadHackathons,
-    "hackathon:updated": loadHackathons,
-    "hackathon:deleted": loadHackathons,
-    "hackathon:approval-updated": loadHackathons
-  });
-
-  useEffect(() => {
-    const locations = [...new Set(hackathons.map((h) => h.location).filter(Boolean))].sort((a, b) =>
-      a.localeCompare(b)
-    );
-    setAvailableLocations(locations);
-  }, [hackathons]);
-
+  // Instant Filter Engine
   useEffect(() => {
     const locationTerm = normalizeLocation(searchLocation);
     const filtered = hackathons.filter((hackathon) => {
-      const locationHaystack = normalizeLocation(
-        `${hackathon.location || ""} ${hackathon.address || ""}`
-      );
+      const locationHaystack = normalizeLocation(hackathon.location || "");
       const status = getHackathonStatus(hackathon);
+      
       const matchesLocation = !locationTerm || locationHaystack.includes(locationTerm);
       const matchesStatus = selectedStatus === "all" || status === selectedStatus;
+      
       return matchesLocation && matchesStatus;
     });
     setFilteredHackathons(filtered);
   }, [hackathons, searchLocation, selectedStatus, getHackathonStatus]);
 
+  // Live Stats Calculator based on current filters
+  const stats = useMemo(() => {
+    return {
+      total: filteredHackathons.length,
+      ongoing: filteredHackathons.filter(h => getHackathonStatus(h) === "ongoing").length,
+      upcoming: filteredHackathons.filter(h => getHackathonStatus(h) === "upcoming").length,
+      ended: filteredHackathons.filter(h => getHackathonStatus(h) === "ended").length,
+      online: filteredHackathons.filter(h => (h.location || "").toLowerCase().includes("online")).length
+    };
+  }, [filteredHackathons, getHackathonStatus]);
+
+  // Group by location for Map Pins
   const locationGroups = useMemo(() => {
     const groups = new Map();
     filteredHackathons
-      .filter(hasValidCoordinates)
+      .filter(hasValidCoordinates) 
       .forEach((hackathon) => {
-        const key = normalizeLocation(hackathon.location || "");
-        if (!key) return;
+        const key = `${hackathon.latitude.toFixed(2)}:${hackathon.longitude.toFixed(2)}`;
 
         if (!groups.has(key)) {
+          const parts = hackathon.location.split(',');
+          const displayName = parts.length > 2 ? parts.slice(-3).join(',').trim() : hackathon.location;
+
           groups.set(key, {
             key,
-            location: hackathon.location || "Unknown location",
+            location: displayName,
             items: [],
-            latitudes: [],
-            longitudes: [],
-            statusCounts: { active: 0, upcoming: 0, ended: 0, cancelled: 0 }
+            latitude: hackathon.latitude,
+            longitude: hackathon.longitude,
+            statusCounts: { ongoing: 0, upcoming: 0, ended: 0 }
           });
         }
 
         const group = groups.get(key);
         const status = getHackathonStatus(hackathon);
         group.items.push(hackathon);
-        group.latitudes.push(Number(hackathon.latitude));
-        group.longitudes.push(Number(hackathon.longitude));
-        if (group.statusCounts[status] !== undefined) {
-          group.statusCounts[status] += 1;
-        }
+        group.statusCounts[status] = (group.statusCounts[status] || 0) + 1;
       });
 
-    return Array.from(groups.values()).map((group) => ({
-      ...group,
-      count: group.items.length,
-      latitude: group.latitudes.reduce((sum, value) => sum + value, 0) / group.latitudes.length,
-      longitude: group.longitudes.reduce((sum, value) => sum + value, 0) / group.longitudes.length
-    }));
+    return Array.from(groups.values());
   }, [filteredHackathons, getHackathonStatus]);
 
-  const locationGroupsWithOffset = useMemo(() => {
-    const buckets = new Map();
-
-    locationGroups.forEach((group) => {
-      const key = toCoordBucket(group.latitude, group.longitude);
-      if (!buckets.has(key)) {
-        buckets.set(key, []);
-      }
-      buckets.get(key).push(group);
-    });
-
-    return locationGroups.map((group) => {
-      const bucketKey = toCoordBucket(group.latitude, group.longitude);
-      const bucket = buckets.get(bucketKey) || [];
-      const index = bucket.findIndex((item) => item.key === group.key);
-
-      if (bucket.length <= 1 || index < 0) {
-        return {
-          ...group,
-          displayLatitude: group.latitude,
-          displayLongitude: group.longitude
-        };
-      }
-
-      const ringRadius = 0.12;
-      const angle = (2 * Math.PI * index) / bucket.length;
-      const latitudeOffset = ringRadius * Math.cos(angle);
-      const longitudeOffset =
-        (ringRadius * Math.sin(angle)) / Math.max(Math.cos((group.latitude * Math.PI) / 180), 0.2);
-
-      return {
-        ...group,
-        displayLatitude: group.latitude + latitudeOffset,
-        displayLongitude: group.longitude + longitudeOffset
-      };
-    });
-  }, [locationGroups]);
-
-  const maxCount = useMemo(
-    () => Math.max(1, ...locationGroups.map((group) => group.count)),
-    [locationGroups]
-  );
-
-  const getHeatColor = useCallback(
-    (count) => {
-      const ratio = Math.min(1, count / maxCount);
-      if (ratio > 0.7) return "#dc2626";
-      if (ratio > 0.4) return "#f97316";
-      if (ratio > 0.2) return "#facc15";
-      return "#22c55e";
-    },
-    [maxCount]
-  );
-
+  // Render Leaflet Map
   useEffect(() => {
     if (mapInstance.current) {
       mapInstance.current.remove();
@@ -256,48 +203,81 @@ const HackathonTrackingMap = () => {
     markersRef.current = [];
     if (!mapRef.current) return undefined;
 
-    mapInstance.current = L.map(mapRef.current).setView([20, 0], 2);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    mapInstance.current = L.map(mapRef.current).setView([22.5937, 78.9629], 5);
+    
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
       attribution: "&copy; OpenStreetMap contributors",
       maxZoom: 19
     }).addTo(mapInstance.current);
 
-    if (!locationGroupsWithOffset.length) return undefined;
+    if (!locationGroups.length) return undefined;
 
     const bounds = [];
-    locationGroupsWithOffset.forEach((group) => {
-      const heatColor = getHeatColor(group.count);
-      const radius = 14 + Math.min(22, group.count * 3);
-      const circle = L.circleMarker([group.displayLatitude, group.displayLongitude], {
-        radius,
-        color: "#ffffff",
-        weight: 2,
-        fillColor: heatColor,
-        fillOpacity: 0.75
-      }).addTo(mapInstance.current);
+    
+    locationGroups.forEach((group) => {
+      // Create a custom numbered PIN
+      const pinColor = group.statusCounts.ongoing > 0 ? "bg-emerald-500" 
+                     : group.statusCounts.upcoming > 0 ? "bg-blue-500" 
+                     : "bg-slate-600";
 
-      const statusLine = `Active: ${group.statusCounts.active} | Upcoming: ${group.statusCounts.upcoming} | Ended: ${group.statusCounts.ended}`;
-      circle.bindPopup(
-        `<div class="font-sans p-2">
-          <h4 class="font-bold text-sm mb-1">${group.location}</h4>
-          <p class="text-xs text-gray-600">${group.count} hackathon(s)</p>
-          <p class="text-xs text-gray-500 mt-1">${statusLine}</p>
-          <p class="text-xs text-indigo-600 mt-2">Click this heat dot to open all hackathons for this location.</p>
-        </div>`
+      const customIcon = L.divIcon({
+        className: 'custom-pin bg-transparent border-0',
+        html: `
+          <div class="relative flex items-center justify-center w-10 h-10">
+            <div class="absolute inset-0 ${pinColor} rounded-full opacity-30 animate-ping"></div>
+            <div class="relative z-10 flex items-center justify-center w-8 h-8 ${pinColor} text-white font-bold text-sm rounded-full shadow-lg border-2 border-white">
+              ${group.items.length}
+            </div>
+            <div class="absolute -bottom-1 left-1/2 w-2 h-2 ${pinColor} transform -translate-x-1/2 rotate-45 border-r-2 border-b-2 border-white"></div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 36],
+        popupAnchor: [0, -36]
+      });
+      
+      const marker = L.marker([group.latitude, group.longitude], { icon: customIcon })
+                      .addTo(mapInstance.current);
+
+      const titlesHtml = group.items
+        .slice(0, 5)
+        .map(h => `<li class="truncate py-1.5 border-b border-slate-100 last:border-0 font-medium text-slate-800">• ${h.title}</li>`)
+        .join('');
+      
+      const moreHtml = group.items.length > 5 
+        ? `<li class="py-1 text-violet-600 font-bold text-[11px]">+ ${group.items.length - 5} more events here</li>` 
+        : '';
+
+      const statusLine = `
+        <span class="text-emerald-600 font-bold">${group.statusCounts.ongoing} Ongoing</span> • 
+        <span class="text-blue-600 font-bold">${group.statusCounts.upcoming} Upcoming</span>
+      `;
+      
+      marker.bindPopup(
+        `<div class="font-sans p-2 min-w-[240px] max-w-[280px]">
+          <h4 class="font-bold text-xs mb-2 text-slate-500 uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center gap-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            ${group.location}
+          </h4>
+          <ul class="text-sm mb-3 m-0 p-0 list-none">
+            ${titlesHtml}
+            ${moreHtml}
+          </ul>
+          <div class="text-[10px] bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
+            ${statusLine}
+          </div>
+        </div>`,
+        { className: 'rounded-xl overflow-hidden shadow-xl' }
       );
 
-      circle.on("click", () => {
-        navigate(`/dashboard/user?section=browse&location=${encodeURIComponent(group.location)}`);
-      });
-
-      bounds.push([group.displayLatitude, group.displayLongitude]);
-      markersRef.current.push(circle);
+      bounds.push([group.latitude, group.longitude]);
+      markersRef.current.push(marker);
     });
 
     if (bounds.length === 1) {
-      mapInstance.current.setView(bounds[0], 6);
-    } else {
-      mapInstance.current.fitBounds(L.latLngBounds(bounds), { padding: [30, 30], maxZoom: 12 });
+      mapInstance.current.setView(bounds[0], 11);
+    } else if (bounds.length > 1) {
+      mapInstance.current.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 12 });
     }
 
     return () => {
@@ -307,169 +287,124 @@ const HackathonTrackingMap = () => {
       }
       markersRef.current = [];
     };
-  }, [getHeatColor, locationGroupsWithOffset, navigate]);
-
-  const submitLocationSearch = () => {
-    setSearchLocation(searchLocationDraft.trim());
-  };
-
-  const clearLocationSearch = () => {
-    setSearchLocation("");
-    setSearchLocationDraft("");
-  };
+  }, [locationGroups]);
 
   if (loading) {
     return (
-      <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-        <div className="h-96 w-full rounded-2xl bg-slate-100 flex items-center justify-center">
-          <p className="text-slate-500">Loading hackathons map...</p>
+      <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="h-[500px] w-full rounded-2xl bg-slate-50 flex flex-col items-center justify-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-violet-500 border-t-transparent mb-4"></div>
+          <p className="text-slate-700 font-bold">Loading Map Data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-      <div>
-        <h3 className="text-2xl font-bold text-slate-950">Track Hackathons</h3>
-        <p className="mt-2 text-sm text-slate-600">
-          Real-time location heat map. Click a location dot to open all hackathons from that location.
-        </p>
-      </div>
-
-      {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
+    <div className="space-y-6 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+      
+      {/* 1. Header & Live Search Bar */}
+      <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
+        <div>
+          <h3 className="text-2xl font-bold text-slate-950">Hackathon Radar</h3>
+          <p className="text-sm text-slate-500 mt-1">
+            Search locations and track events in real-time.
+          </p>
         </div>
-      )}
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Search size={16} className="text-slate-600" />
-          <label className="text-sm font-semibold text-slate-700">Filter by Location</label>
-        </div>
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="Search location..."
-                value={searchLocationDraft}
-                onChange={(e) => setSearchLocationDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submitLocationSearch();
-                }}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {searchLocationDraft && (
-                <button
-                  onClick={clearLocationSearch}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
+        <div className="w-full lg:w-96 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
+          <input
+            type="text"
+            placeholder="Type city (e.g., Delhi, Pune)..."
+            value={searchLocation}
+            onChange={(e) => setSearchLocation(e.target.value)} // INSTANT SEARCH
+            className="w-full pl-12 pr-10 py-3.5 border border-slate-300 bg-slate-50 hover:bg-white rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all shadow-inner"
+          />
+          {searchLocation && (
             <button
-              onClick={submitLocationSearch}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+              onClick={() => setSearchLocation("")}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
             >
-              Search
+              <X size={18} />
             </button>
-          </div>
-
-          {availableLocations.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={clearLocationSearch}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-                  searchLocation === ""
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                All Locations
-              </button>
-              {availableLocations.map((location) => (
-                <button
-                  key={location}
-                  onClick={() => {
-                    setSearchLocationDraft(location);
-                    setSearchLocation(location);
-                  }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-                    normalizeLocation(searchLocation) === normalizeLocation(location)
-                      ? "bg-blue-600 text-white"
-                      : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  {location}
-                </button>
-              ))}
-            </div>
           )}
+        </div>
+      </div>
 
+      {/* 2. Live Stats Dashboard */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center gap-4">
+          <div className="p-3 bg-white rounded-xl shadow-sm"><MapPin className="text-violet-600" size={20}/></div>
           <div>
-            <label className="text-sm font-semibold text-slate-700">Filter by Status</label>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {STATUS_OPTIONS.map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setSelectedStatus(status)}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold capitalize transition ${
-                    selectedStatus === status
-                      ? "bg-slate-900 text-white"
-                      : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
+            <p className="text-xs font-bold text-slate-500 uppercase">Total Events</p>
+            <p className="text-2xl font-black text-slate-900">{stats.total}</p>
+          </div>
+        </div>
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-4">
+          <div className="p-3 bg-white rounded-xl shadow-sm"><CheckCircle className="text-emerald-500" size={20}/></div>
+          <div>
+            <p className="text-xs font-bold text-emerald-700 uppercase">Ongoing</p>
+            <p className="text-2xl font-black text-emerald-900">{stats.ongoing}</p>
+          </div>
+        </div>
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center gap-4">
+          <div className="p-3 bg-white rounded-xl shadow-sm"><Calendar className="text-blue-500" size={20}/></div>
+          <div>
+            <p className="text-xs font-bold text-blue-700 uppercase">Upcoming</p>
+            <p className="text-2xl font-black text-blue-900">{stats.upcoming}</p>
+          </div>
+        </div>
+        <div className="bg-slate-100 border border-slate-200 rounded-2xl p-4 flex items-center gap-4 opacity-70">
+          <div className="p-3 bg-white rounded-xl shadow-sm"><Clock className="text-slate-500" size={20}/></div>
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase">Ended</p>
+            <p className="text-2xl font-black text-slate-700">{stats.ended}</p>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-slate-50 p-4 text-xs font-semibold text-slate-700">
-        <div className="inline-flex items-center gap-2">
-          <Flame size={14} className="text-green-500" />
-          Low Density
-        </div>
-        <div className="inline-flex items-center gap-2">
-          <Flame size={14} className="text-yellow-500" />
-          Medium Density
-        </div>
-        <div className="inline-flex items-center gap-2">
-          <Flame size={14} className="text-orange-500" />
-          High Density
-        </div>
-        <div className="inline-flex items-center gap-2">
-          <Flame size={14} className="text-red-600" />
-          Very High Density
-        </div>
+      {/* 3. Status Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm font-bold text-slate-700 mr-2">Filter Status:</span>
+        {STATUS_OPTIONS.map((status) => (
+          <button
+            key={status}
+            onClick={() => setSelectedStatus(status)}
+            className={`px-5 py-2 rounded-xl text-sm font-bold capitalize transition-all ${
+              selectedStatus === status
+                ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
+                : "bg-white border border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+            }`}
+          >
+            {status}
+          </button>
+        ))}
+
+        {stats.online > 0 && (
+          <div className="ml-auto flex items-center gap-2 rounded-xl bg-violet-50 border border-violet-100 px-4 py-2 text-xs font-bold text-violet-700">
+            <Globe size={16} />
+            {stats.online} Online Events (Not on map)
+          </div>
+        )}
       </div>
 
-      {locationGroups.length > 0 ? (
-        <div
-          ref={mapRef}
-          className="h-96 w-full rounded-2xl border border-slate-200"
-          style={{ background: "#f0f0f0" }}
-        />
-      ) : (
-        <div className="h-96 w-full rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-center">
-          <div className="text-center">
-            <MapPin className="mx-auto h-8 w-8 text-slate-400 mb-2" />
-            <p className="text-slate-500 text-sm">No hackathons found with location data for this filter</p>
+      {/* 4. The Interactive Map */}
+      <div className="relative rounded-2xl overflow-hidden border-2 border-slate-200 shadow-inner">
+        {locationGroups.length > 0 ? (
+          <div
+            ref={mapRef}
+            className="h-[550px] w-full z-0"
+            style={{ background: "#e5e7eb" }}
+          />
+        ) : (
+          <div className="h-[550px] w-full bg-slate-50 flex flex-col items-center justify-center">
+            <MapPin className="h-12 w-12 text-slate-300 mb-3" />
+            <p className="text-slate-600 font-bold text-lg">No locations found</p>
+            <p className="text-slate-400 text-sm mt-1">Try searching for a different city or changing the status filter.</p>
           </div>
-        </div>
-      )}
-
-      {filteredHackathons.length === 0 && !error && (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center">
-          <MapPin className="mx-auto h-8 w-8 text-slate-400 mb-2" />
-          <p className="text-slate-500">No hackathons found for this filter</p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
