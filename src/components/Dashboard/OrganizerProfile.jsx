@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { apiClient } from "../../api/client";
 import { Edit2, Save, X } from "lucide-react";
+import { useRealtimeStream } from "../../hooks/useRealtimeStream";
 
 const OrganizerProfile = ({ user }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -23,6 +24,17 @@ const OrganizerProfile = ({ user }) => {
     fetchOrganizerProfile();
   }, [user]);
 
+  useRealtimeStream({
+    "profile:updated": (payload) => {
+      const userId = localStorage.getItem("userId");
+      if (payload?.userId === userId) {
+        fetchOrganizerProfile();
+        setSuccess("Profile refreshed with the latest live changes.");
+        setTimeout(() => setSuccess(""), 3000);
+      }
+    }
+  });
+
   const fetchOrganizerProfile = async () => {
     try {
       setLoading(true);
@@ -35,16 +47,16 @@ const OrganizerProfile = ({ user }) => {
 
       const response = await apiClient.fetchProfile(userId, userRole);
       
-      if (response.profile) {
+      if (response) {
         setProfileData({
-          firstName: response.profile.firstName || "",
-          lastName: response.profile.lastName || "",
-          email: response.profile.email || "",
-          phoneNumber: response.profile.phoneNumber || "",
-          organizationName: response.profile.organizationName || "",
-          organizationWebsite: response.profile.organizationWebsite || "",
-          bio: response.profile.bio || "",
-          profilePicture: response.profile.profilePicture || ""
+          firstName: response.firstName || "",
+          lastName: response.lastName || "",
+          email: response.email || "",
+          phoneNumber: response.phoneNumber || "",
+          organizationName: response.organizationName || "",
+          organizationWebsite: response.organizationWebsite || "",
+          bio: response.bio || "",
+          profilePicture: response.profilePicture || ""
         });
       }
     } catch (err) {

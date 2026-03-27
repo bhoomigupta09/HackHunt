@@ -10,6 +10,8 @@ const SignupAdmin = () => {
     email: "",
     password: "",
     phoneNumber: "",
+    adminLevel: "moderator",
+    department: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,7 +37,12 @@ const SignupAdmin = () => {
         formData.firstName,
         formData.lastName,
         formData.phoneNumber,
-        "admin"
+        "admin",
+        null,
+        {
+          adminLevel: formData.adminLevel,
+          department: formData.department
+        }
       );
 
       if (response.userId) {
@@ -160,6 +167,38 @@ const SignupAdmin = () => {
               value={formData.phoneNumber}
               onChange={handleChange}
               placeholder="1234567890"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Admin Level
+            </label>
+            <select
+              name="adminLevel"
+              value={formData.adminLevel}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
+              disabled={loading}
+            >
+              <option value="moderator">Moderator</option>
+              <option value="support">Support</option>
+              <option value="super_admin">Super Administrator</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Department
+            </label>
+            <input
+              type="text"
+              name="department"
+              value={formData.department}
+              onChange={handleChange}
+              placeholder="Platform Operations"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
               disabled={loading}
             />

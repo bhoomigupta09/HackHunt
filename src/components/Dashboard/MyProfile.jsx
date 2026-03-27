@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { apiClient } from "../../api/client";
 import { Edit2, Save, X } from "lucide-react";
+import { useRealtimeStream } from "../../hooks/useRealtimeStream";
 
 const MyProfile = ({ user }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -22,6 +23,17 @@ const MyProfile = ({ user }) => {
     // Fetch user profile data from backend
     fetchUserProfile();
   }, [user]);
+
+  useRealtimeStream({
+    "profile:updated": (payload) => {
+      const userId = localStorage.getItem("userId");
+      if (payload?.userId === userId) {
+        fetchUserProfile();
+        setSuccess("Profile refreshed with the latest live changes.");
+        setTimeout(() => setSuccess(""), 3000);
+      }
+    }
+  });
 
   const fetchUserProfile = async () => {
     try {

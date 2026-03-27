@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const bcryptjs = require("bcryptjs");
 const mongoose = require("mongoose");
+const { broadcast, createActivity } = require("../utils/realtimeHub");
 
 const userRouter = Router();
 const Schema = mongoose.Schema;
@@ -56,12 +57,14 @@ const adminSchema = new Schema(
     password: { type: String, required: true },
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
+    phoneNumber: { type: String, default: "" },
     role: { type: String, default: "admin", enum: ["admin"], immutable: true },
     adminLevel: {
       type: String,
       enum: ["super_admin", "moderator", "support"],
       default: "moderator"
     },
+    department: { type: String, default: "" },
     profilePicture: { type: String, default: null },
     permissions: { type: [String], default: ["view_users", "view_hackathons"] },
     usersManaged: { type: [mongoose.Schema.Types.ObjectId], default: [] },
@@ -173,6 +176,24 @@ userRouter.post("/signup", async (req, res) => {
       firstName: user.firstName,
       email: user.email
     });
+
+    broadcast("user:created", {
+      userId: String(user._id),
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email
+    });
+
+    createActivity({
+      type: `${user.role}_signup`,
+      authorId: String(user._id),
+      authorName: `${user.firstName} ${user.lastName}`.trim(),
+      authorRole: user.role,
+      message: `${user.firstName} joined the platform as ${user.role}.`,
+      targetId: String(user._id),
+      targetType: user.role
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -195,6 +216,26 @@ userRouter.post("/signin", async (req, res) => {
 
     user.lastLogin = new Date();
     await user.save();
+
+    broadcast("user:signed-in", {
+      userId: String(user._id),
+      role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      timestamp: user.lastLogin
+    });
+
+    createActivity({
+      type: `${role}_login`,
+      authorId: String(user._id),
+      authorName: `${user.firstName} ${user.lastName}`.trim(),
+      authorRole: role,
+      message: `${user.firstName} signed in as ${role}.`,
+      targetId: String(user._id),
+      targetType: role,
+      timestamp: user.lastLogin
+    });
 
     res.json({
       message: "Signin successful",
@@ -224,6 +265,120 @@ userRouter.get("/profile/:userId/:role", async (req, res) => {
   }
 });
 
+userRouter.get("/directory", async (req, res) => {
+  try {
+    const [users, organizers, admins] = await Promise.all([
+      User.find().select("-password").sort({ createdAt: -1 }),
+      Organizer.find().select("-password").sort({ createdAt: -1 }),
+      Admin.find().select("-password").sort({ createdAt: -1 })
+    ]);
+
+    const directory = [...users, ...organizers, ...admins]
+      .map((account) => ({
+        id: String(account._id),
+        name: `${account.firstName || ""} ${account.lastName || ""}`.trim(),
+        email: account.email,
+        role: account.role,
+        status: account.isActive ? "active" : "inactive",
+        joinDate: account.createdAt,
+        hackathonsJoined: Array.isArray(account.joinedHackathons)
+          ? account.joinedHackathons.length
+          : 0,
+        registrations: Array.isArray(account.joinedHackathons)
+          ? account.joinedHackathons.length
+          : 0,
+        hackathonsCreated: Array.isArray(account.hackathonsCreated)
+          ? account.hackathonsCreated.length
+          : 0,
+        participants: Array.isArray(account.hackathonsManaged)
+          ? account.hackathonsManaged.length
+          : 0,
+        organizationName: account.organizationName || "",
+        lastUpdated: account.updatedAt
+      }))
+      .sort((a, b) => new Date(b.joinDate).getTime() - new Date(a.joinDate).getTime());
+
+    res.json({
+      users: directory
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+userRouter.patch("/directory/:userId/status", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { role = "user", isActive } = req.body;
+    const model = getModelForRole(role);
+
+    const updatedUser = await model
+      .findByIdAndUpdate(
+        userId,
+        { isActive: Boolean(isActive) },
+        { new: true, runValidators: true }
+      )
+      .select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    broadcast("user:status-updated", {
+      userId: String(updatedUser._id),
+      role: updatedUser.role,
+      isActive: updatedUser.isActive
+    });
+
+    createActivity({
+      type: "user_status_changed",
+      authorId: String(updatedUser._id),
+      authorName: `${updatedUser.firstName || ""} ${updatedUser.lastName || ""}`.trim() || updatedUser.email,
+      authorRole: updatedUser.role,
+      message: `${updatedUser.firstName || "A user"} is now ${updatedUser.isActive ? "active" : "inactive"}.`
+    });
+
+    return res.json({
+      message: "User status updated successfully.",
+      user: updatedUser
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update user status.", error: error.message });
+  }
+});
+
+userRouter.delete("/directory/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { role = "user" } = req.body;
+    const model = getModelForRole(role);
+    const deletedUser = await model.findByIdAndDelete(userId).select("-password");
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    broadcast("user:deleted", {
+      userId: String(deletedUser._id),
+      role: deletedUser.role
+    });
+
+    createActivity({
+      type: "user_deleted",
+      authorId: String(deletedUser._id),
+      authorName: `${deletedUser.firstName || ""} ${deletedUser.lastName || ""}`.trim() || deletedUser.email,
+      authorRole: deletedUser.role,
+      message: `${deletedUser.firstName || "A user"} was removed from the platform.`
+    });
+
+    return res.json({
+      message: "User deleted successfully."
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to delete user.", error: error.message });
+  }
+});
+
 userRouter.put("/profile/:userId/:role", async (req, res) => {
   try {
     const { userId, role } = req.params;
@@ -235,6 +390,8 @@ userRouter.put("/profile/:userId/:role", async (req, res) => {
       "profilePicture",
       "bio",
       "skills",
+      "adminLevel",
+      "department",
       "organizationName",
       "organizationWebsite",
       "organizationLogo"
@@ -254,6 +411,20 @@ userRouter.put("/profile/:userId/:role", async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    broadcast("profile:updated", {
+      userId: String(user._id),
+      role: user.role,
+      profile: user
+    });
+
+    createActivity({
+      type: "profile_updated",
+      authorId: String(user._id),
+      authorName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+      authorRole: user.role,
+      message: `${user.firstName || "A user"} updated their profile.`
+    });
 
     res.json(user);
   } catch (error) {

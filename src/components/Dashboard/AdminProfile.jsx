@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { apiClient } from "../../api/client";
-import { Edit2, Save, X, AlertCircle } from "lucide-react";
+import { Edit2, Save, X, AlertCircle, Users, ShieldCheck, ClipboardList, Activity } from "lucide-react";
+import { useRealtimeStream } from "../../hooks/useRealtimeStream";
 
 const AdminProfile = ({ user }) => {
+  // ============= STATE HOOKS =============
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [platformStats, setPlatformStats] = useState({
+    totalUsers: 0,
+    activeOrganizers: 0,
+    activeHackathons: 0,
+    totalRegistrations: 0
+  });
   const [profileData, setProfileData] = useState({
     firstName: "",
     lastName: "",
@@ -16,11 +24,7 @@ const AdminProfile = ({ user }) => {
     department: ""
   });
 
-  useEffect(() => {
-    // Fetch admin profile data from backend
-    fetchAdminProfile();
-  }, [user]);
-
+  // ============= FUNCTION DEFINITIONS (Before any hooks that use them) =============
   const fetchAdminProfile = async () => {
     try {
       setLoading(true);
@@ -33,14 +37,14 @@ const AdminProfile = ({ user }) => {
 
       const response = await apiClient.fetchProfile(userId, userRole);
       
-      if (response.profile) {
+      if (response) {
         setProfileData({
-          firstName: response.profile.firstName || "",
-          lastName: response.profile.lastName || "",
-          email: response.profile.email || "",
-          phoneNumber: response.profile.phoneNumber || "",
-          adminLevel: response.profile.adminLevel || "moderator",
-          department: response.profile.department || ""
+          firstName: response.firstName || "",
+          lastName: response.lastName || "",
+          email: response.email || "",
+          phoneNumber: response.phoneNumber || "",
+          adminLevel: response.adminLevel || "moderator",
+          department: response.department || ""
         });
       }
     } catch (err) {
@@ -58,6 +62,56 @@ const AdminProfile = ({ user }) => {
       setLoading(false);
     }
   };
+
+  const fetchPlatformStats = async () => {
+    try {
+      const [directoryResponse, hackathonResponse] = await Promise.all([
+        apiClient.fetchDirectory(),
+        apiClient.getAdminHackathons()
+      ]);
+
+      const users = directoryResponse.users || [];
+      const hackathons = hackathonResponse.hackathons || [];
+
+      setPlatformStats({
+        totalUsers: users.length,
+        activeOrganizers: users.filter((item) => item.role === "organizer" && item.status === "active").length,
+        activeHackathons: hackathons.filter((item) => item.approvalStatus === "approved").length,
+        totalRegistrations: hackathons.reduce((sum, item) => sum + (item.participants || 0), 0)
+      });
+    } catch (err) {
+      console.error("Admin stats fetch error:", err);
+    }
+  };
+
+  // ============= EFFECT HOOKS =============
+  useEffect(() => {
+    // Fetch admin profile data from backend
+    fetchAdminProfile();
+    fetchPlatformStats();
+  }, [user]);
+
+  useRealtimeStream({
+    "profile:updated": (payload) => {
+      const userId = localStorage.getItem("userId");
+      if (payload?.userId === userId) {
+        fetchAdminProfile();
+        setSuccess("Profile refreshed with the latest live changes.");
+        setTimeout(() => setSuccess(""), 3000);
+      }
+    },
+    "user:created": fetchPlatformStats,
+    "user:deleted": fetchPlatformStats,
+    "user:status-updated": fetchPlatformStats,
+    "hackathon:created": fetchPlatformStats,
+    "hackathon:updated": fetchPlatformStats,
+    "hackathon:deleted": fetchPlatformStats,
+    "hackathon:approval-updated": fetchPlatformStats,
+    "registration:created": fetchPlatformStats,
+    "registration:deleted": fetchPlatformStats
+  });
+
+  // ============= EVENT HANDLERS =============
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -100,7 +154,7 @@ const AdminProfile = ({ user }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn">
       {/* Security Warning */}
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg flex items-start space-x-3">
         <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
@@ -113,7 +167,7 @@ const AdminProfile = ({ user }) => {
       </div>
 
       {/* Profile Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-start animate-slideDown">
         <div>
           <h3 className="text-2xl font-bold text-gray-800">Administrator Profile</h3>
           <p className="text-gray-600 mt-1">Manage your administrator account information</p>
@@ -163,7 +217,7 @@ const AdminProfile = ({ user }) => {
       )}
 
       {/* Profile Form */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slideUp">
         {/* First Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -272,21 +326,49 @@ const AdminProfile = ({ user }) => {
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-gray-200">
-        <div className="bg-gradient-to-br from-red-50 to-pink-50 p-6 rounded-lg">
-          <div className="text-3xl font-bold text-red-600">127</div>
-          <p className="text-gray-600 mt-2 text-sm">Total Users</p>
+        <div className="bg-gradient-to-br from-red-50 to-pink-50 p-6 rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-fadeIn" style={{ animationDelay: '0ms' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-3xl font-bold text-red-600 transition-all duration-300">{platformStats.totalUsers}</div>
+              <p className="text-gray-600 mt-2 text-sm">Total Users</p>
+            </div>
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <Users size={24} className="text-red-600" />
+            </div>
+          </div>
         </div>
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg">
-          <div className="text-3xl font-bold text-blue-600">34</div>
-          <p className="text-gray-600 mt-2 text-sm">Active Organizers</p>
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-fadeIn" style={{ animationDelay: '100ms' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-3xl font-bold text-blue-600 transition-all duration-300">{platformStats.activeOrganizers}</div>
+              <p className="text-gray-600 mt-2 text-sm">Active Organizers</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center animate-pulse">
+              <ShieldCheck size={24} className="text-blue-600" />
+            </div>
+          </div>
         </div>
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-lg">
-          <div className="text-3xl font-bold text-green-600">12</div>
-          <p className="text-gray-600 mt-2 text-sm">Active Hackathons</p>
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-fadeIn" style={{ animationDelay: '200ms' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-3xl font-bold text-green-600 transition-all duration-300">{platformStats.activeHackathons}</div>
+              <p className="text-gray-600 mt-2 text-sm">Active Hackathons</p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <ClipboardList size={24} className="text-green-600" />
+            </div>
+          </div>
         </div>
-        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-lg">
-          <div className="text-3xl font-bold text-purple-600">98</div>
-          <p className="text-gray-600 mt-2 text-sm">Total Registrations</p>
+        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-fadeIn" style={{ animationDelay: '300ms' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-3xl font-bold text-purple-600 transition-all duration-300">{platformStats.totalRegistrations}</div>
+              <p className="text-gray-600 mt-2 text-sm">Total Registrations</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+              <Activity size={24} className="text-purple-600" />
+            </div>
+          </div>
         </div>
       </div>
 

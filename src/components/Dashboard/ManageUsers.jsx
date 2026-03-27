@@ -1,348 +1,260 @@
-import React, { useState } from "react";
-import { Search, Trash2, Eye, Edit2, Shield, Ban, CheckCircle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Search, Trash2, Shield, AlertCircle, Check } from "lucide-react";
+import { apiClient } from "../../api/client";
+import { useRealtimeStream } from "../../hooks/useRealtimeStream";
 
 const ManageUsers = ({ user }) => {
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      role: "user",
-      joinDate: "2025-12-15",
-      status: "active",
-      hackathonsJoined: 5,
-      registrations: 3
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@organization.com",
-      role: "organizer",
-      joinDate: "2025-11-20",
-      status: "active",
-      hackathonsCreated: 5,
-      participants: 145
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      email: "mike@example.com",
-      role: "user",
-      joinDate: "2025-10-10",
-      status: "active",
-      hackathonsJoined: 3,
-      registrations: 2
-    },
-    {
-      id: 4,
-      name: "Sarah Williams",
-      email: "sarah@techstartup.com",
-      role: "organizer",
-      joinDate: "2025-09-05",
-      status: "active",
-      hackathonsCreated: 3,
-      participants: 89
-    },
-    {
-      id: 5,
-      name: "Alex Brown",
-      email: "alex@example.com",
-      role: "user",
-      joinDate: "2025-08-12",
-      status: "inactive",
-      hackathonsJoined: 1,
-      registrations: 1
-    }
-  ]);
-
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [workingUserId, setWorkingUserId] = useState("");
+
+  const adminId = localStorage.getItem("userId");
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await apiClient.fetchDirectory();
+      setUsers(response.users || []);
+    } catch (err) {
+      setError(err.message || "Failed to load users.");
+      console.error("Error loading users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  useRealtimeStream({
+    "user:created": fetchUsers,
+    "user:deleted": fetchUsers,
+    "user:status-updated": fetchUsers,
+    "user:blocked": fetchUsers,
+    "user:unblocked": fetchUsers
+  });
+
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      setWorkingUserId(userId);
+      setError("");
+      await apiClient.deleteUser(userId, adminId);
+      setSuccess("User deleted successfully.");
+      setTimeout(() => setSuccess(""), 3000);
+      await fetchUsers();
+    } catch (err) {
+      setError(err.message || "Failed to delete user.");
+    } finally {
+      setWorkingUserId("");
+    }
+  };
+
+  const handleBlockUser = async (userId, currentlyBlocked) => {
+    try {
+      setWorkingUserId(userId);
+      setError("");
+      
+      const action = currentlyBlocked ? "unblock" : "block";
+      const isActive = currentlyBlocked; // If currently blocked, set to active (true)
+      await apiClient.blockUser(userId, isActive, adminId);
+      
+      setSuccess(`User ${action}ed successfully.`);
+      setTimeout(() => setSuccess(""), 3000);
+      await fetchUsers();
+    } catch (err) {
+      setError(err.message || `Failed to ${currentlyBlocked ? "unblock" : "block"} user.`);
+    } finally {
+      setWorkingUserId("");
+    }
+  };
 
   const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = 
+      (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(searchTerm.toLowerCase());
+    
     const matchesRole = filterRole === "all" || u.role === filterRole;
     const matchesStatus = filterStatus === "all" || u.status === filterStatus;
+    
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const handleDeleteUser = (id) => {
-    if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
-      setUsers((prev) => prev.filter((u) => u.id !== id));
-    }
+  const stats = {
+    total: users.length,
+    organizers: users.filter(u => u.role === "organizer").length,
+    active: users.filter(u => u.status === "active").length,
+    blocked: users.filter(u => u.status === "blocked").length
   };
 
-  const handleToggleStatus = (id) => {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === id
-          ? { ...u, status: u.status === "active" ? "inactive" : "active" }
-          : u
-      )
-    );
-  };
-
-  const handleViewUser = (userData) => {
-    setSelectedUser(userData);
-    setShowModal(true);
-  };
-
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case "user":
-        return "bg-blue-100 text-blue-800";
-      case "organizer":
-        return "bg-amber-100 text-amber-800";
-      case "admin":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusColor = (status) => {
-    return status === "active"
-      ? "bg-green-100 text-green-800"
-      : "bg-red-100 text-red-800";
-  };
+  if (loading) {
+    return <div className="py-16 text-center text-slate-500 animate-fadeIn">Loading users...</div>;
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h3 className="text-2xl font-bold text-gray-800">User & Organizer Management</h3>
-        <p className="text-gray-600 mt-1">Monitor and manage all users and organizers on the platform</p>
-      </div>
-
-      {/* Filters and Search */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Search Box */}
-        <div className="md:col-span-2 relative">
-          <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-          />
+    <div className="space-y-6 animate-fadeIn">
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center gap-2">
+          <AlertCircle size={18} />
+          {error}
         </div>
+      )}
 
-        {/* Role Filter */}
-        <select
-          value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-        >
-          <option value="all">All Roles</option>
-          <option value="user">Users</option>
-          <option value="organizer">Organizers</option>
-        </select>
+      {success && (
+        <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 flex items-center gap-2">
+          <Check size={18} />
+          {success}
+        </div>
+      )}
 
-        {/* Status Filter */}
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-        >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-      </div>
+      {/* Stats Section */}
+      <section className="grid gap-4 md:grid-cols-4">
+        <div className="rounded-[26px] border border-slate-200 bg-slate-50 px-5 py-5 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-slideUp" style={{ animationDelay: '0ms' }}>
+          <div className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-600">Total Users</div>
+          <div className="mt-3 text-4xl font-bold text-slate-950 transition-all duration-500">{stats.total}</div>
+        </div>
+        <div className="rounded-[26px] border border-blue-200 bg-blue-50 px-5 py-5 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-slideUp" style={{ animationDelay: '100ms' }}>
+          <div className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Organizers</div>
+          <div className="mt-3 text-4xl font-bold text-slate-950 transition-all duration-500">{stats.organizers}</div>
+        </div>
+        <div className="rounded-[26px] border border-emerald-200 bg-emerald-50 px-5 py-5 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-slideUp" style={{ animationDelay: '200ms' }}>
+          <div className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">Active</div>
+          <div className="mt-3 text-4xl font-bold text-slate-950 transition-all duration-500">{stats.active}</div>
+        </div>
+        <div className="rounded-[26px] border border-red-200 bg-red-50 px-5 py-5 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-slideUp" style={{ animationDelay: '300ms' }}>
+          <div className="text-sm font-semibold uppercase tracking-[0.2em] text-red-600">Blocked</div>
+          <div className="mt-3 text-4xl font-bold text-slate-950 transition-all duration-500">{stats.blocked}</div>
+        </div>
+      </section>
 
-      {/* Users Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-lg">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Role</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Join Date</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Activity</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map((userData) => (
-                <tr key={userData.id} className="hover:bg-gray-50 transition">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-800">{userData.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{userData.email}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${getRoleBadgeColor(userData.role)}`}>
-                      {userData.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize flex items-center w-fit space-x-1 ${getStatusColor(userData.status)}`}>
-                      {userData.status === "active" ? (
-                        <CheckCircle size={14} />
-                      ) : (
-                        <Ban size={14} />
-                      )}
-                      <span>{userData.status}</span>
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {new Date(userData.joinDate).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {userData.role === "user" ? (
-                      <span>{userData.hackathonsJoined} hackathons</span>
-                    ) : (
-                      <span>{userData.hackathonsCreated} created</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleViewUser(userData)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                        title="View Details"
-                      >
-                        <Eye size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleToggleStatus(userData.id)}
-                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition"
-                        title={userData.status === "active" ? "Deactivate" : "Activate"}
-                      >
-                        <Shield size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(userData.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                        title="Delete User"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" className="px-6 py-8 text-center text-gray-600">
-                  No users found matching your filters
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Search & Filter Section */}
+      <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)] animate-slideUp transition-all duration-300 hover:shadow-[0_18px_80px_rgba(15,23,42,0.12)]">
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 text-slate-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search users by name or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300"
+            />
+          </div>
 
-      {/* Modal - User Details */}
-      {showModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-bold text-gray-800">{selectedUser.name}</h3>
-                <p className="text-sm text-gray-600">{selectedUser.email}</p>
-              </div>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Filter by Role</label>
+              <select
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300"
               >
-                ✕
-              </button>
+                <option value="all">All Roles</option>
+                <option value="user">Users</option>
+                <option value="organizer">Organizers</option>
+                <option value="admin">Admins</option>
+              </select>
             </div>
 
-            {/* Modal Body */}
-            <div className="px-6 py-4 space-y-6">
-              {/* User Info Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Role</label>
-                  <p className="text-sm font-medium text-gray-800 mt-1 capitalize">{selectedUser.role}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Status</label>
-                  <p className={`text-sm font-medium mt-1 capitalize ${selectedUser.status === "active" ? "text-green-600" : "text-red-600"}`}>
-                    {selectedUser.status}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Join Date</label>
-                  <p className="text-sm font-medium text-gray-800 mt-1">
-                    {new Date(selectedUser.joinDate).toLocaleDateString()}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Activity</label>
-                  {selectedUser.role === "user" ? (
-                    <p className="text-sm font-medium text-gray-800 mt-1">{selectedUser.hackathonsJoined} hackathons</p>
-                  ) : (
-                    <p className="text-sm font-medium text-gray-800 mt-1">{selectedUser.hackathonsCreated} created</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Detailed Stats */}
-              {selectedUser.role === "user" ? (
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-blue-900 mb-3">User Statistics</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-blue-700">Hackathons Joined</p>
-                      <p className="text-2xl font-bold text-blue-600">{selectedUser.hackathonsJoined}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-blue-700">Active Registrations</p>
-                      <p className="text-2xl font-bold text-blue-600">{selectedUser.registrations}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-amber-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-amber-900 mb-3">Organizer Statistics</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-amber-700">Hackathons Created</p>
-                      <p className="text-2xl font-bold text-amber-600">{selectedUser.hackathonsCreated}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-amber-700">Total Participants</p>
-                      <p className="text-2xl font-bold text-amber-600">{selectedUser.participants}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 flex space-x-2 justify-end">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Filter by Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300"
               >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  handleToggleStatus(selectedUser.id);
-                  setShowModal(false);
-                }}
-                className={`px-4 py-2 rounded-lg text-white transition ${
-                  selectedUser.status === "active"
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-green-600 hover:bg-green-700"
-                }`}
-              >
-                {selectedUser.status === "active" ? "Deactivate" : "Activate"} User
-              </button>
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="blocked">Blocked</option>
+              </select>
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Users List Section */}
+      <div className="space-y-3">
+        {filteredUsers.length > 0 ? (
+          filteredUsers.map((u, idx) => (
+            <div
+              key={u.id}
+              className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_18px_60px_rgba(15,23,42,0.08)] hover:shadow-[0_18px_80px_rgba(15,23,42,0.12)] transition-all duration-300 transform hover:translate-x-1 animate-slideUp"
+              style={{ animationDelay: `${Math.min(idx * 40, 300)}ms` }}
+            >
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-400 to-pink-500 flex items-center justify-center text-white font-bold">
+                      {(u.name || "U")[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-900">{u.name || "Unknown User"}</p>
+                      <p className="text-sm text-slate-500">{u.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      u.role === "admin"
+                        ? "bg-purple-100 text-purple-700"
+                        : u.role === "organizer"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-slate-100 text-slate-700"
+                    }`}>
+                      {u.role || "user"}
+                    </span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      u.status === "active"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700"
+                    }`}>
+                      {u.status || "active"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleBlockUser(u.id, u.status === "blocked")}
+                    disabled={workingUserId === u.id}
+                    className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed ${
+                      u.status === "blocked"
+                        ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:shadow-lg"
+                        : "bg-red-50 text-red-700 hover:bg-red-100 hover:shadow-lg"
+                    }`}
+                  >
+                    <Shield size={16} />
+                    {workingUserId === u.id ? "Processing..." : u.status === "blocked" ? "Unblock" : "Block"}
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteUser(u.id)}
+                    disabled={workingUserId === u.id}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-500 text-white px-4 py-2 text-sm font-semibold transition-all duration-300 transform hover:scale-105 hover:bg-red-600 hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 size={16} />
+                    {workingUserId === u.id ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-[24px] border border-dashed border-slate-300 bg-white px-6 py-16 text-center text-slate-500 animate-fadeIn">
+            <p className="font-medium">No users found matching your filters.</p>
+            <p className="text-sm mt-2">Try adjusting your search or filter criteria.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

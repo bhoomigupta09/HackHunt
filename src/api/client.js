@@ -29,7 +29,10 @@ class APIClient {
           errorMessage = errorData.message || errorData.error || errorMessage;
         } else {
           const errorText = await response.text();
-          errorMessage = errorText || errorMessage;
+          const looksLikeHtml = /<html|<!doctype html/i.test(errorText || "");
+          errorMessage = looksLikeHtml
+            ? `Request failed with status ${response.status}.`
+            : (errorText || errorMessage);
         }
         const error = new Error(errorMessage);
         if (errorData?.errors) {
@@ -58,14 +61,24 @@ class APIClient {
   }
 
   // User Authentication endpoints
-  async signup(email, password, firstName, lastName, phoneNumber, role = 'user', organizationName = null) {
+  async signup(
+    email,
+    password,
+    firstName,
+    lastName,
+    phoneNumber,
+    role = 'user',
+    organizationName = null,
+    extraFields = {}
+  ) {
     const body = {
       email,
       password,
       firstName,
       lastName,
       phoneNumber,
-      role
+      role,
+      ...extraFields
     };
 
     // Add organization name if organizer
@@ -125,6 +138,39 @@ class APIClient {
     });
   }
 
+  async fetchDirectory() {
+    return this.request('/user/directory', {
+      method: 'GET',
+    });
+  }
+
+  async updateDirectoryUserStatus(userId, payload) {
+    return this.request(`/user/directory/${userId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteDirectoryUser(userId, payload) {
+    return this.request(`/user/directory/${userId}`, {
+      method: 'DELETE',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async fetchLiveMessages() {
+    return this.request('/realtime/messages', {
+      method: 'GET',
+    });
+  }
+
+  async postLiveMessage(payload) {
+    return this.request('/realtime/messages', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
   // Hackathon endpoints
   async getHackathons(filters = {}) {
     const params = new URLSearchParams();
@@ -147,6 +193,66 @@ class APIClient {
 
   async getHackathonStats() {
     return this.request('/hackathons/stats');
+  }
+
+  async getOrganizerHackathons(organizerId) {
+    return this.request(`/hackathons/organizer/${organizerId}`, {
+      method: 'GET',
+    });
+  }
+
+  async getAdminHackathons(status = '') {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request(`/hackathons/admin/all${query}`, {
+      method: 'GET',
+    });
+  }
+
+  async createHackathon(payload) {
+    return this.request('/hackathons', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateHackathon(hackathonId, payload) {
+    return this.request(`/hackathons/${hackathonId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteHackathon(hackathonId, organizerId) {
+    return this.request(`/hackathons/${hackathonId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ organizerId }),
+    });
+  }
+
+  async updateHackathonApproval(hackathonId, payload) {
+    return this.request(`/hackathons/${hackathonId}/approval`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getUserRegistrations(userId) {
+    return this.request(`/hackathons/registrations/user/${userId}`, {
+      method: 'GET',
+    });
+  }
+
+  async registerForHackathon(hackathonId, payload) {
+    return this.request(`/hackathons/${hackathonId}/register`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async unregisterFromHackathon(registrationId) {
+    return this.request(`/hackathons/registrations/${registrationId}`, {
+      method: 'DELETE',
+    });
   }
 
   // Source endpoints (admin)
@@ -177,6 +283,86 @@ class APIClient {
   async fetchFromSource(provider) {
     return this.request(`/sources/${provider}/fetch`, {
       method: 'POST',
+    });
+  }
+
+  // ==================== ADMIN ENDPOINTS ====================
+
+  async getPlatformStats(adminId) {
+    return this.request('/admin/stats', {
+      method: 'POST',
+      body: JSON.stringify({ adminId }),
+    });
+  }
+
+  async getAdminProfile(adminId) {
+    return this.request(`/admin/profile/${adminId}`, {
+      method: 'GET',
+    });
+  }
+
+  async updateAdminProfile(adminId, payload) {
+    return this.request(`/admin/profile/${adminId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...payload, adminId }),
+    });
+  }
+
+  async getAllUsers(adminId, params = {}) {
+    const queryString = new URLSearchParams({
+      adminId,
+      ...params
+    }).toString();
+    return this.request(`/admin/users?${queryString}`, {
+      method: 'GET',
+    });
+  }
+
+  async deleteUser(userId, adminId) {
+    return this.request(`/admin/users/${userId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ adminId }),
+    });
+  }
+
+  async blockUser(userId, isActive, adminId) {
+    return this.request(`/admin/users/${userId}/block`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive, adminId }),
+    });
+  }
+
+  async getAllOrganizers(adminId, params = {}) {
+    const queryString = new URLSearchParams({
+      adminId,
+      ...params
+    }).toString();
+    return this.request(`/admin/organizers?${queryString}`, {
+      method: 'GET',
+    });
+  }
+
+  async deleteOrganizer(organizerId, adminId) {
+    return this.request(`/admin/organizers/${organizerId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ adminId }),
+    });
+  }
+
+  async verifyOrganizer(organizerId, isVerified, adminId) {
+    return this.request(`/admin/organizers/${organizerId}/verify`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isVerified, adminId }),
+    });
+  }
+
+  async getActivityLogs(adminId, params = {}) {
+    const queryString = new URLSearchParams({
+      adminId,
+      ...params
+    }).toString();
+    return this.request(`/admin/activity-logs?${queryString}`, {
+      method: 'GET',
     });
   }
 }
