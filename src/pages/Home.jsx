@@ -54,8 +54,8 @@ const Home = () => {
     setSubmitMessage('');
 
     try {
-      // YAHAN FIX KIYA HAI: '/contact' ki jagah '/contact-us' 
-      const response = await apiClient.request('/contact-us', {
+      // YAHAN FIX KIYA HAI: '/contact-us' ki jagah '/contact' 
+      const response = await apiClient.request('/contact', {
         method: 'POST',
         body: JSON.stringify(contactForm)
       });
@@ -87,6 +87,7 @@ const Home = () => {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_40%,rgba(244,63,94,0.18),transparent_18%),radial-gradient(circle_at_54%_52%,rgba(34,211,238,0.15),transparent_22%),radial-gradient(circle_at_82%_24%,rgba(139,92,246,0.24),transparent_26%),linear-gradient(180deg,#0d0a18_0%,#0b0a14_100%)]" />
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         </div>
+
         <div className="relative mx-auto max-w-screen-xl px-6 py-16 sm:py-20 lg:py-24">
           <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
@@ -109,12 +110,18 @@ const Home = () => {
                 </Link>
               </div>
             </div>
+
             <div className="relative min-h-[520px]">
               <div className="absolute right-0 top-2 h-96 w-96 rounded-full bg-violet-500/15 blur-3xl" />
               <div className="absolute bottom-8 left-8 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
+
               <div className="absolute right-0 top-0 w-full max-w-[42rem] rounded-[2.2rem] border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.45)] backdrop-blur-xl">
                 <div className="rounded-[1.9rem] bg-[linear-gradient(135deg,rgba(91,33,182,0.22),rgba(15,23,42,0.65),rgba(34,211,238,0.16))] p-5">
-                  <img src={heroImage} alt="Hackathon participants collaborating" className="h-[26rem] w-full rounded-[1.5rem] object-cover lg:h-[30rem]" />
+                  <img
+                    src={heroImage}
+                    alt="Hackathon participants collaborating around laptops"
+                    className="h-[26rem] w-full rounded-[1.5rem] object-cover lg:h-[30rem]"
+                  />
                 </div>
               </div>
             </div>

@@ -9,6 +9,7 @@ const forgotPasswordRoutes = require("./routes/forgotPassword");
 const hackathonRoutes = require("./routes/hackathonRoutes");
 const { realtimeRouter } = require("./routes/realtime");
 const chatRoute = require("./routes/chatRoute");
+const contactRoutes = require("./routes/contact");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -47,6 +48,7 @@ app.use("/api/v1/hackathons", hackathonRoutes);
 app.use("/api/v1/realtime", realtimeRouter);
 app.use("/api/hackathons", hackathonRoutes);
 app.use("/api/chat", chatRoute);
+app.use("/api/v1/contact", contactRoutes);
 
 async function startServer() {
   app.listen(PORT, () => {
