@@ -14,6 +14,8 @@ import SignupUser from './pages/SignupUser';
 import SignupOrganizer from './pages/SignupOrganizer';
 import SignupAdmin from './pages/SignupAdmin';
 import ForgotPassword from './pages/ForgotPassword';
+import VerifySignupOtp from './pages/VerifySignupOtp';
+import LiveHackathonsPage from './pages/hackathons/page';
 
 
 function App() {
@@ -28,6 +30,7 @@ function App() {
         <Route path="/login-organizer" element={<LoginOrganizer />} />
         <Route path="/login-admin" element={<LoginAdmin />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-signup-otp" element={<VerifySignupOtp />} />
 
         <Route path="/signup-user" element={<SignupUser />} />
         <Route path="/signup-organizer" element={<SignupOrganizer />} />
@@ -35,6 +38,7 @@ function App() {
 
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/hackathons" element={<LiveHackathonsPage />} />
           <Route path="/hackathon/:id" element={<HackathonDetail />} />
           <Route path="/Organiser" element={<Navigate to="/dashboard/organizer" replace />} />
           <Route path="/Admin" element={<Navigate to="/admin" replace />} />

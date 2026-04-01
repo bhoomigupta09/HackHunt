@@ -38,9 +38,9 @@
 //   };
 
 //   const menuItems = [
-//     { id: "profile", label: "My Profile", icon: "👤" },
-//     { id: "browse", label: "Browse Hackathons", icon: "🔍" },
-//     { id: "registered", label: "My Registrations", icon: "✅" }
+//     { id: "profile", label: "My Profile", icon: "ðŸ‘¤" },
+//     { id: "browse", label: "Browse Hackathons", icon: "ðŸ”" },
+//     { id: "registered", label: "My Registrations", icon: "âœ…" }
 //   ];
 
 //   return (
@@ -152,7 +152,7 @@ const UserDashboard = () => {
   const defaultSection =
     sectionFromQuery && ["profile", "browse", "registered", "track"].includes(sectionFromQuery)
       ? sectionFromQuery
-      : "profile";
+      : "browse";
 
   const [activeSection, setActiveSection] = useState(defaultSection);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -200,10 +200,10 @@ const UserDashboard = () => {
   };
 
   const menuItems = [
-    { id: "profile", label: "My Profile", icon: "👤" },
-    { id: "browse", label: "Browse Hackathons", icon: "🔍" },
-    { id: "registered", label: "My Registrations", icon: "✅" },
-    { id: "track", label: "Track Hackathons", icon: "🗺️" }
+    { id: "profile", label: "My Profile", icon: "" },
+    { id: "browse", label: "Browse Hackathons", icon: "" },
+    { id: "registered", label: "My Registrations", icon: "" },
+    { id: "track", label: "Track Hackathons", icon: "" }
   ];
 
   return (
@@ -264,7 +264,7 @@ const UserDashboard = () => {
         <div className="mt-auto px-2 pb-4 pt-6">
           <button
             onClick={() => setShowLogoutConfirm(true)}
-            className={`w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-200`}
+            className={`w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-red-500 via-rose-500 to-fuchsia-600 hover:from-red-600 hover:to-fuchsia-700 text-white rounded-2xl shadow-lg shadow-red-500/30 transition duration-200`}
           >
             <LogOut size={18} />
             {sidebarOpen && <span>Logout</span>}

@@ -1,4 +1,5 @@
 // Client-side API functions for the frontend
+import { normalizeValidationMessage } from '../utils/validation';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '/api/v1';
@@ -26,20 +27,24 @@ class APIClient {
         let errorData = null;
         if (isJson) {
           errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
+          errorMessage = normalizeValidationMessage(
+            errorData.message || errorData.error || errorMessage
+          );
         } else {
           const errorText = await response.text();
           const looksLikeHtml = /<html|<!doctype html/i.test(errorText || "");
           errorMessage = looksLikeHtml
             ? `Request failed with status ${response.status}.`
-            : (errorText || errorMessage);
+            : normalizeValidationMessage(errorText || errorMessage);
         }
         const error = new Error(errorMessage);
         if (errorData?.errors) {
-          error.errors = errorData.errors;
+          error.errors = errorData.errors.map((item) =>
+            normalizeValidationMessage(item)
+          );
         }
         if (errorData?.message) {
-          error.message = errorData.message;
+          error.message = normalizeValidationMessage(errorData.message);
         }
         throw error;
       }
@@ -100,6 +105,28 @@ class APIClient {
         password,
         role
       }),
+    });
+  }
+
+  /** Registration: send OTP after form validation (stores pending signup server-side) */
+  async sendSignupOtp(payload) {
+    return this.request('/auth/send-signup-otp', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async resendSignupOtp(email, role = 'user') {
+    return this.request('/auth/resend-signup-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    });
+  }
+
+  async verifySignupOtp(email, otp, role = 'user') {
+    return this.request('/auth/verify-signup-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp, role }),
     });
   }
 
@@ -193,6 +220,13 @@ class APIClient {
 
   async getHackathonStats() {
     return this.request('/hackathons/stats');
+  }
+
+  /** Live scraped listings (Devpost, Unstop, Devfolio); server caches 30 minutes */
+  async getLiveScrapedHackathons(options = {}) {
+    const q =
+      options.refresh === true || options.refresh === '1' ? '?refresh=1' : '';
+    return this.request(`/hackathons/live${q}`);
   }
 
   async getOrganizerHackathons(organizerId) {

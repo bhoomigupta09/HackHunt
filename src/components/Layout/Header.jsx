@@ -6,7 +6,7 @@ import NavbarDropdownButton from '../NavbarDropdownButton';
 
 const Header = () => {
   const { pathname } = useLocation();
-  const isHomePage = pathname === '/';
+  const isDarkHero = pathname === '/' || pathname === '/hackathons';
 
   // prepare menu items for login and signup
   const loginItems = [
@@ -53,7 +53,7 @@ const Header = () => {
   return (
     <header
       className={`sticky top-0 z-50 border-b backdrop-blur-xl ${
-        isHomePage
+        isDarkHero
           ? 'border-white/8 bg-[#0d0a18]/85 shadow-[0_18px_45px_rgba(3,7,18,0.45)]'
           : 'border-white/60 bg-white/75 shadow-[0_12px_40px_rgba(15,23,42,0.08)]'
       }`}
@@ -68,7 +68,7 @@ const Header = () => {
               </div>
               <div>
                 <span className={`text-4xl font-extrabold bg-gradient-to-r bg-clip-text text-transparent ${
-                  isHomePage
+                  isDarkHero
                     ? 'from-white via-violet-100 to-cyan-200'
                     : 'from-violet-600 via-purple-600 to-blue-600'
                 }`}>
@@ -80,13 +80,13 @@ const Header = () => {
 
           <nav className="hidden items-center gap-10 lg:flex">
             <div className="flex items-center space-x-3 sm:space-x-4">
-              <NavbarDropdownButton label="Login" items={loginItems} variant={isHomePage ? 'ghost-dark' : 'filled'} />
+              <NavbarDropdownButton label="Login" items={loginItems} variant={isDarkHero ? 'ghost-dark' : 'filled'} />
               <NavbarDropdownButton label="Sign up" items={signupItems} variant="filled" />
             </div>
           </nav>
 
           <nav className="flex items-center space-x-3 lg:hidden">
-            <NavbarDropdownButton label="Login" items={loginItems} variant={isHomePage ? 'ghost-dark' : 'filled'} />
+            <NavbarDropdownButton label="Login" items={loginItems} variant={isDarkHero ? 'ghost-dark' : 'filled'} />
             <NavbarDropdownButton label="Sign up" items={signupItems} variant="filled" />
           </nav>
         </div>

@@ -3,11 +3,16 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
+
 const { userRouter } = require("./database/user");
 const { adminRouter } = require("./routes/admin");
 const forgotPasswordRoutes = require("./routes/forgotPassword");
 const hackathonRoutes = require("./routes/hackathonRoutes");
 const { realtimeRouter } = require("./routes/realtime");
+const authSignupOtpRoutes = require("./routes/authSignupOtp");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -42,6 +47,8 @@ app.get("/api/v1/health", (req, res) => {
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/forgot-password", forgotPasswordRoutes);
+app.use("/api/v1/auth", authSignupOtpRoutes);
+app.use("/api/auth", authSignupOtpRoutes);
 app.use("/api/v1/hackathons", hackathonRoutes);
 app.use("/api/v1/realtime", realtimeRouter);
 app.use("/api/hackathons", hackathonRoutes);

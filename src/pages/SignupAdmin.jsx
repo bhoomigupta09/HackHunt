@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { apiClient } from "../api/client";
+import { isValidEmail } from "../utils/validation";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
 
 const SignupAdmin = () => {
@@ -28,30 +29,31 @@ const SignupAdmin = () => {
     e.preventDefault();
     setError("");
     setErrors([]);
+
+    const emailValue = (formData.email || "").trim().toLowerCase();
+    if (!isValidEmail(emailValue)) {
+      setError("Please provide a valid email address.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await apiClient.signup(
-        formData.email,
-        formData.password,
-        formData.firstName,
-        formData.lastName,
-        formData.phoneNumber,
-        "admin",
-        null,
-        {
-          adminLevel: formData.adminLevel,
-          department: formData.department
-        }
-      );
+      const response = await apiClient.sendSignupOtp({
+        email: emailValue,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber,
+        role: "admin",
+        adminLevel: formData.adminLevel,
+        department: formData.department
+      });
 
-      if (response.userId) {
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userId", response.userId);
-        localStorage.setItem("userName", formData.firstName);
-        localStorage.setItem("userRole", "admin");
-        localStorage.setItem("userEmail", formData.email);
-        navigate("/admin");
+      if (response.success) {
+        navigate("/verify-signup-otp", {
+          state: { email: emailValue, role: "admin" }
+        });
       }
     } catch (err) {
       const errorMessage = err.message || "Signup failed. Please try again.";
@@ -238,7 +240,7 @@ const SignupAdmin = () => {
             disabled={loading}
             className="w-full bg-gradient-to-r from-red-500 to-pink-600 text-white py-2 rounded-lg hover:from-red-600 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-400 transition duration-200 font-semibold mt-6"
           >
-            {loading ? "Creating Account..." : "Create Admin Account"}
+            {loading ? "Sending code…" : "Send verification code"}
           </button>
         </form>
 

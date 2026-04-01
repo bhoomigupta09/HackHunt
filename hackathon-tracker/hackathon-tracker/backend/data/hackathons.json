@@ -1,0 +1,307 @@
+{
+  "updatedAt": "2026-04-01T16:38:00.929Z",
+  "total": 27,
+  "hackathons": [
+    {
+      "title": "Hack Days NIET",
+      "url": "https://hack-days-niet.devpost.com/",
+      "deadline": "Mar 27 - Apr 01, 2026",
+      "prize": "₹ <span data-currency-value>0</span>",
+      "participants": 117,
+      "thumbnail": "https://d112y698adiu2z.cloudfront.net/photos/production/challenge_thumbnails/004/516/357/datas/medium_square.jpg",
+      "source": "Devpost",
+      "themes": [
+        "Machine Learning/AI",
+        "Open Ended",
+        "Web"
+      ]
+    },
+    {
+      "title": "Red Alert | Cybersecurity Hackathon 2026",
+      "url": "https://red-alert-hackathon.devpost.com/",
+      "deadline": "Mar 07 - Apr 01, 2026",
+      "prize": "$<span data-currency-value>0</span>",
+      "participants": 79,
+      "thumbnail": "https://d112y698adiu2z.cloudfront.net/photos/production/challenge_thumbnails/004/404/400/datas/medium_square.jpeg",
+      "source": "Devpost",
+      "themes": [
+        "Cybersecurity"
+      ]
+    },
+    {
+      "title": "xStocks Hackathon EthCC: Market Open",
+      "url": "https://xstocks-market-open.devpost.com/",
+      "deadline": "Mar 31 - Apr 02, 2026",
+      "prize": "$<span data-currency-value>75,000</span>",
+      "participants": 80,
+      "thumbnail": "https://d112y698adiu2z.cloudfront.net/photos/production/challenge_thumbnails/004/342/184/datas/medium_square.png",
+      "source": "Devpost",
+      "themes": [
+        "Blockchain",
+        "Fintech"
+      ]
+    },
+    {
+      "title": "Hack Day Kanpur ",
+      "url": "https://hack-day-kanpur.devpost.com/",
+      "deadline": "Mar 30 - Apr 02, 2026",
+      "prize": "$<span data-currency-value>0</span>",
+      "participants": 74,
+      "thumbnail": "https://d112y698adiu2z.cloudfront.net/photos/production/challenge_thumbnails/004/343/762/datas/medium_square.png",
+      "source": "Devpost",
+      "themes": [
+        "Beginner Friendly",
+        "Education",
+        "Social Good"
+      ]
+    },
+    {
+      "title": "SattamThon",
+      "url": "https://sattamthon.devpost.com/",
+      "deadline": "Feb 03 - Apr 02, 2026",
+      "prize": "$<span data-currency-value>0</span>",
+      "participants": 74,
+      "thumbnail": "https://d112y698adiu2z.cloudfront.net/photos/production/challenge_thumbnails/004/236/821/datas/medium_square.png",
+      "source": "Devpost",
+      "themes": [
+        "Education",
+        "Machine Learning/AI",
+        "Productivity"
+      ]
+    },
+    {
+      "title": "LynxHack2026",
+      "url": "https://lynxhack2026.devpost.com/",
+      "deadline": "Mar 31 - Apr 03, 2026",
+      "prize": "$<span data-currency-value>0</span>",
+      "participants": 16,
+      "thumbnail": "https://d112y698adiu2z.cloudfront.net/photos/production/challenge_thumbnails/004/499/010/datas/medium_square.png",
+      "source": "Devpost",
+      "themes": [
+        "Machine Learning/AI"
+      ]
+    },
+    {
+      "title": "Weber State AI Hackathon 2026",
+      "url": "https://weber-state-ai-hackathon-2026.devpost.com/",
+      "deadline": "Mar 21 - Apr 04, 2026",
+      "prize": "$<span data-currency-value>1,800</span>",
+      "participants": 174,
+      "thumbnail": "https://d112y698adiu2z.cloudfront.net/photos/production/challenge_thumbnails/004/399/594/datas/medium_square.png",
+      "source": "Devpost",
+      "themes": [
+        "Beginner Friendly",
+        "Education",
+        "Machine Learning/AI"
+      ]
+    },
+    {
+      "title": "HackVision",
+      "url": "https://hackvision.devpost.com/",
+      "deadline": "Mar 28 - Apr 04, 2026",
+      "prize": "$<span data-currency-value>1,050</span>",
+      "participants": 264,
+      "thumbnail": "https://d112y698adiu2z.cloudfront.net/photos/production/challenge_thumbnails/004/399/687/datas/medium_square.png",
+      "source": "Devpost",
+      "themes": [
+        "Blockchain",
+        "Cybersecurity",
+        "Open Ended"
+      ]
+    },
+    {
+      "title": "INNOSpark Pitch Competition",
+      "url": "https://innospark-competition.devpost.com/",
+      "deadline": "Mar 01 - Apr 04, 2026",
+      "prize": "$<span data-currency-value>3,000</span>",
+      "participants": 515,
+      "thumbnail": "https://d112y698adiu2z.cloudfront.net/photos/production/challenge_thumbnails/004/307/085/datas/medium_square.png",
+      "source": "Devpost",
+      "themes": [
+        "Beginner Friendly",
+        "Education",
+        "Social Good"
+      ]
+    },
+    {
+      "title": "Market Royale",
+      "url": "hackathons/market-royale-apogee-26-bits-pilani-under-steel-skies-bits-1669084",
+      "deadline": "2026-04-12T23:59:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "Armoriq X Openclaw Hackathon",
+      "url": "hackathons/armoriq-x-openclaw-hackathon-apogee-26-bits-pilani-under-steel-skies-bits-1669106",
+      "deadline": "2026-04-15T00:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "The Growth Hackathon",
+      "url": "hackathons/the-growth-hackathon-shaheed-bhagat-singh-evening-college-sbsec-university-of-delhi-du-new-delhi-1667237",
+      "deadline": "2026-04-12T00:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "National Level Physical AI Robothon",
+      "url": "hackathons/national-level-physical-ai-robothon-xp-skills-1668720",
+      "deadline": "2026-04-05T00:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "Hackathon (Hardware and Software) - Nirmith'26",
+      "url": "hackathons/hackathon-hardware-and-software-nirmith26-nirmith26-nitte-meenakshi-institute-of-technology-nmit-yelahanka-1668493",
+      "deadline": "2026-04-29T15:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "Ideathon - Nirmith'26",
+      "url": "hackathons/ideathon-nirmith26-nirmith26-nitte-meenakshi-institute-of-technology-nmit-yelahanka-1667936",
+      "deadline": "2026-04-28T17:30:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "RAZER CTF 2026 (Capture The Flag)",
+      "url": "hackathons/razer-ctf-2026-capture-the-flag-droidecks-1667994",
+      "deadline": "2026-04-14T00:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "Hack Helix",
+      "url": "hackathons/hack-helix-helix-tiet-thapar-university-tu-patiala-punjab-india-1668615",
+      "deadline": "2026-04-12T00:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "YOLO Pitchathon",
+      "url": "hackathons/yolo-pitchathon-23-ventures-inc-1668595",
+      "deadline": "2026-04-07T00:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "YOLO- Pune Edition 2",
+      "url": "hackathons/yolo-pune-edition-2-23-ventures-inc-1667090",
+      "deadline": "2026-04-06T20:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "HackDays",
+      "url": "hackathons/hackdays-galgotias-college-of-engineering-technology-gcet-greater-noida-1668191",
+      "deadline": "2026-04-11T17:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "Robo Soccer",
+      "url": "hackathons/robo-soccer-metacognition-tech-venture-unifest-2026-galgotias-college-of-engineering-technology-gcet-greater--1666201",
+      "deadline": "2026-04-07T20:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "Bluetooth Grand Prix",
+      "url": "hackathons/bluetooth-grand-prix-metacognition-tech-venture-unifest-2026-galgotias-college-of-engineering-technology-gcet-1666374",
+      "deadline": "2026-04-07T20:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "IOThon",
+      "url": "hackathons/iothon-metacognition-tech-venture-unifest-2026-galgotias-college-of-engineering-technology-gcet-greater-noida-1666377",
+      "deadline": "2026-04-07T20:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "Robo Chef",
+      "url": "hackathons/robo-chef-metacognition-tech-venture-unifest-2026-galgotias-college-of-engineering-technology-gcet-greater-no-1666382",
+      "deadline": "2026-04-07T20:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "Galgotias Programming League",
+      "url": "hackathons/galgotias-programming-league-galgotias-college-of-engineering-technology-gcet-greater-noida-1666281",
+      "deadline": "2026-04-07T20:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "Blind Coding || Pixels 2026",
+      "url": "hackathons/blind-coding-pixels-2026-sies-college-of-management-studies-sies-mumbai-1668216",
+      "deadline": "2026-04-22T13:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    },
+    {
+      "title": "Futura Design-a-thon",
+      "url": "hackathons/futura-design-a-thon-designx-school-of-design-rishihood-university-1668031",
+      "deadline": "2026-04-16T00:00:00+05:30",
+      "prize": "N/A",
+      "participants": 0,
+      "thumbnail": "",
+      "source": "Unstop",
+      "themes": []
+    }
+  ]
+}

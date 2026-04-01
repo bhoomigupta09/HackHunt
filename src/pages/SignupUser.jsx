@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { apiClient } from "../api/client";
-import { isEmailDomainAllowed, allowedEmailDomains } from "../utils/validation";
+import { isValidEmail } from "../utils/validation";
 import { Eye, EyeOff } from "lucide-react";
 
 const SignupUser = () => {
@@ -29,30 +29,27 @@ const SignupUser = () => {
     setErrors([]);
 
     const emailValue = (formData.email || "").trim().toLowerCase();
-    if (!isEmailDomainAllowed(emailValue)) {
-      setError(`Email must be one of: ${allowedEmailDomains.join(", ")}`);
+    if (!isValidEmail(emailValue)) {
+      setError("Please provide a valid email address.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await apiClient.signup(
-        emailValue,
-        formData.password,
-        formData.firstName,
-        formData.lastName,
-        formData.phoneNumber,
-        "user"
-      );
+      const response = await apiClient.sendSignupOtp({
+        email: emailValue,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber,
+        role: "user"
+      });
 
-      if (response.userId) {
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userId", response.userId);
-        localStorage.setItem("userName", formData.firstName);
-        localStorage.setItem("userRole", "user");
-        localStorage.setItem("userEmail", formData.email);
-        navigate("/dashboard/user");
+      if (response.success) {
+        navigate("/verify-signup-otp", {
+          state: { email: emailValue, role: "user" }
+        });
       }
     } catch (err) {
       const errorMessage = err.message || "Signup failed. Please try again.";
@@ -194,7 +191,7 @@ const SignupUser = () => {
             disabled={loading}
             className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 rounded-lg hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 transition duration-200 font-semibold mt-6"
           >
-            {loading ? "Creating Account..." : "Create Account"}
+            {loading ? "Sending code…" : "Send verification code"}
           </button>
         </form>
 

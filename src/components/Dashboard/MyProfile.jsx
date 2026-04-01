@@ -307,7 +307,7 @@ const MyProfile = ({ user }) => {
                       onClick={() => removeSkill(skill)}
                       className="ml-1 hover:text-purple-600"
                     >
-                      ✕
+                      âœ•
                     </button>
                   )}
                 </div>

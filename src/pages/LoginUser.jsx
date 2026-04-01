@@ -24,7 +24,7 @@ const LoginUser = () => {
       }
 
       const response = await apiClient.signin(email, password, "user");
-      
+
       if (response.userId) {
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("userId", response.userId);
@@ -32,7 +32,7 @@ const LoginUser = () => {
         localStorage.setItem("userName", response.firstName);
         localStorage.setItem("userEmail", response.email);
 
-        navigate("/dashboard/user");
+        navigate("/dashboard/user?section=browse");
       }
     } catch (err) {
       setError(err.message || "Login failed. Please try again.");
@@ -45,8 +45,6 @@ const LoginUser = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
       <div className="w-full max-w-md bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
-        
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-2xl shadow-lg">
             👤
@@ -55,7 +53,6 @@ const LoginUser = () => {
           <p className="text-slate-300 mt-2">Sign in to explore and join hackathons</p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           {error && (
             <div className="bg-red-900 bg-opacity-30 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm flex items-start space-x-2">
@@ -64,7 +61,6 @@ const LoginUser = () => {
             </div>
           )}
 
-          {/* Email Field */}
           <div>
             <label className="block text-sm font-medium text-slate-200 mb-2">
               Email Address
@@ -79,7 +75,6 @@ const LoginUser = () => {
             />
           </div>
 
-          {/* Password Field */}
           <div>
             <label className="block text-sm font-medium text-slate-200 mb-2">
               Password
@@ -103,18 +98,19 @@ const LoginUser = () => {
             </div>
           </div>
 
-          {/* Remember Me & Forgot Password */}
           <div className="flex items-center justify-between text-sm">
             <label className="flex items-center space-x-2 text-slate-300">
               <input type="checkbox" className="rounded bg-slate-700 border-slate-600" />
               <span>Remember me</span>
             </label>
-            <Link to={`/forgot-password?role=user&email=${encodeURIComponent(email)}`} className="text-blue-400 hover:text-blue-300 font-medium">
+            <Link
+              to={`/forgot-password?role=user&email=${encodeURIComponent(email)}`}
+              className="text-blue-400 hover:text-blue-300 font-medium"
+            >
               Forgot password?
             </Link>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
@@ -124,9 +120,8 @@ const LoginUser = () => {
           </button>
         </form>
 
-        {/* Footer */}
         <div className="mt-8 text-center text-sm text-slate-400">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link to="/signup-user" className="text-blue-400 hover:text-blue-300 font-semibold">
             Sign up here
           </Link>

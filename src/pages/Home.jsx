@@ -59,7 +59,7 @@ const Home = () => {
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         </div>
 
-        <div className="relative mx-auto max-w-[1380px] px-6 py-16 sm:py-20 lg:py-24">
+        <div className="relative mx-auto max-w-[1380px] px-6 py-10 sm:py-14 lg:py-16">
           <div className="grid items-center gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16">
             <div className="max-w-3xl">
               <h1 className="max-w-4xl text-5xl font-black leading-[0.92] tracking-[-0.06em] text-white sm:text-6xl lg:text-[7rem]">
