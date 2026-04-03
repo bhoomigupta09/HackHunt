@@ -50,15 +50,10 @@ const Header = () => {
   ];
 
   return (
-<<<<<<< HEAD
     <>
-      <header className={`sticky top-0 z-50 border-b backdrop-blur-xl ${
-        isHomePage
-=======
     <header
       className={`sticky top-0 z-50 border-b backdrop-blur-xl ${
         isDarkHero
->>>>>>> 0698bc94902e4375fafc660c52f75294fb15af23
           ? 'border-white/8 bg-[#0d0a18]/85 shadow-[0_18px_45px_rgba(3,7,18,0.45)]'
           : 'border-white/60 bg-white/75 shadow-[0_12px_40px_rgba(15,23,42,0.08)]'
       }`}>
@@ -95,19 +90,13 @@ const Header = () => {
               </Link>
             </div>
 
-<<<<<<< HEAD
-            {/* ── RIGHT: Login / Signup — exactly like original ── */}
-            <nav className="flex items-center space-x-3">
-              <NavbarDropdownButton label="Login" items={loginItems} variant={isHomePage ? 'ghost-dark' : 'filled'} />
-=======
           <nav className="hidden items-center gap-10 lg:flex">
             <div className="flex items-center space-x-3 sm:space-x-4">
               <NavbarDropdownButton label="Login" items={loginItems} variant={isDarkHero ? 'ghost-dark' : 'filled'} />
->>>>>>> 0698bc94902e4375fafc660c52f75294fb15af23
               <NavbarDropdownButton label="Sign up" items={signupItems} variant="filled" />
-            </nav>
+            </div>
+          </nav>
 
-<<<<<<< HEAD
           </div>
         </div>
       </header>
@@ -116,7 +105,7 @@ const Header = () => {
       <div
         onClick={() => setDrawerOpen(false)}
         style={{
-          position: 'fixed', inset: 0, zIndex: 60,
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 60,
           background: 'rgba(0,0,0,0.55)',
           backdropFilter: 'blur(2px)',
           opacity: drawerOpen ? 1 : 0,
@@ -245,12 +234,6 @@ const Header = () => {
           <p style={{ textAlign: 'center', fontSize: '11px', color: '#334155', marginTop: '12px' }}>
             © 2026 HackHunt
           </p>
-=======
-          <nav className="flex items-center space-x-3 lg:hidden">
-            <NavbarDropdownButton label="Login" items={loginItems} variant={isDarkHero ? 'ghost-dark' : 'filled'} />
-            <NavbarDropdownButton label="Sign up" items={signupItems} variant="filled" />
-          </nav>
->>>>>>> 0698bc94902e4375fafc660c52f75294fb15af23
         </div>
       </div>
     </>

@@ -12,8 +12,6 @@ import {
 } from "lucide-react";
 import { apiClient } from "../../api/client";
 
-import { apiClient } from "../../api/client";
-
 import mockHackathons from "../../data/unstop_scraped_data.json";
 
 /** Map GET /hackathons/live items to the card model used in this component */
@@ -108,26 +106,6 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
       setLoading(true);
       setError("");
 
-<<<<<<< HEAD
-      // 1. JSON ki jagah ab hum Live Database se data fetch kar rahe hain
-      const response = await apiClient.getHackathons({});
-      const realDatabaseHackathons = response.hackathons || [];
-
-      // 2. Data ko apke frontend ke design ke hisaab se format kar rahe hain
-      const formattedData = realDatabaseHackathons.map((h) => ({
-        ...h,
-        _id: h.id, 
-        mode: h.type, 
-        organizerName: h.organizer, 
-        prize: h.totalPrize,
-        calculatedStatus: getHackathonStatus(h) 
-      }));
-
-      setHackathons(formattedData);
-    } catch (err) {
-      console.error("Error loading Database data:", err);
-      setError("Failed to load hackathons from the Live Database.");
-=======
       let rows = [];
       try {
         const res = await apiClient.getLiveScrapedHackathons();
@@ -156,7 +134,6 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
       } catch {
         setHackathons([]);
       }
->>>>>>> 0698bc94902e4375fafc660c52f75294fb15af23
     } finally {
       setLoading(false);
     }
