@@ -1,12 +1,18 @@
-export const allowedEmailDomains = ["gmail.com"];
-
-export function isEmailDomainAllowed(email, allowedDomains = allowedEmailDomains) {
+export function isValidEmail(email) {
   if (!email || typeof email !== "string") return false;
   const normalized = email.trim().toLowerCase();
 
-  const match = normalized.match(/^[^\s@]+@([^\s@]+)$/);
-  if (!match) return false;
+  // Basic email format validation
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+}
 
-  const domain = match[1].toLowerCase();
-  return allowedDomains.includes(domain);
+export function normalizeValidationMessage(message) {
+  const normalized = String(message || "").trim();
+  const legacyGmailOnlyPattern = /please\s+provide\s+a\s+valid\s+@gmail\.com\s+email\s+address/i;
+
+  if (legacyGmailOnlyPattern.test(normalized)) {
+    return "Please provide a valid email address.";
+  }
+
+  return normalized;
 }

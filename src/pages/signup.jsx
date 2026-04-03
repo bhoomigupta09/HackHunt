@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/client";
+import { isValidEmail } from "../utils/validation";
 
 const Signup = () => {
   const [firstName, setFirstName] = useState("");
@@ -49,37 +50,43 @@ const Signup = () => {
         return;
       }
 
-      const response = await apiClient.signup(
-        email,
+      const emailValue = (email || "").trim().toLowerCase();
+      if (!isValidEmail(emailValue)) {
+        setError("Please provide a valid email address.");
+        setLoading(false);
+        return;
+      }
+
+      const payload = {
+        email: emailValue,
         password,
         firstName,
         lastName,
         phoneNumber,
-        role,
-        organizationName
-      );
+        role
+      };
+      if (role === "organizer") {
+        payload.organizationName = organizationName;
+      }
+      if (role === "admin") {
+        payload.adminLevel = "moderator";
+        payload.department = "";
+      }
 
-      if (response.userId) {
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userId", response.userId);
-        localStorage.setItem("userName", firstName);
-        localStorage.setItem("userRole", role);
-        localStorage.setItem("userEmail", email);
-        
-        // Redirect based on role
-        if (role === 'user') {
-          navigate("/dashboard/user");
-        } else if (role === 'organizer') {
-          navigate("/dashboard/organizer");
-        } else if (role === 'admin') {
-          navigate("/admin");
-        } else {
-          navigate("/");
-        }
+      const response = await apiClient.sendSignupOtp(payload);
+
+      if (response.success) {
+        navigate("/verify-signup-otp", {
+          state: { email: emailValue, role }
+        });
       }
     } catch (err) {
       const errorMessage = err.message || "Signup failed. Please try again.";
-      setError(errorMessage);
+      if (Array.isArray(err.errors) && err.errors.length) {
+        setError(err.errors.join(" "));
+      } else {
+        setError(errorMessage);
+      }
       console.error("Signup error:", err);
       
       // Log more details for debugging
@@ -217,7 +224,7 @@ const Signup = () => {
             disabled={loading}
             className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
           >
-            {loading ? "Creating account..." : "Sign Up"}
+            {loading ? "Sending code…" : "Send verification code"}
           </button>
         </form>
 

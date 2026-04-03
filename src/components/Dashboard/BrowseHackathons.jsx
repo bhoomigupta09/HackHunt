@@ -7,13 +7,50 @@ import {
   MapPin,
   Search,
   Sparkles,
-  Users,
   Trophy,
   Globe
 } from "lucide-react";
-
-// IMPORT YOUR LOCAL JSON DATA HERE
 import { apiClient } from "../../api/client";
+
+import { apiClient } from "../../api/client";
+
+import mockHackathons from "../../data/unstop_scraped_data.json";
+
+/** Map GET /hackathons/live items to the card model used in this component */
+function mapLiveApiToCard(h) {
+  const deadline = h.deadline && h.deadline !== "N/A" ? String(h.deadline) : "";
+  let calculatedStatus = "upcoming";
+  if (deadline) {
+    const end = Date.parse(deadline);
+    if (!Number.isNaN(end)) {
+      calculatedStatus = end < Date.now() ? "ended" : "upcoming";
+    }
+  }
+  const desc =
+    Array.isArray(h.tags) && h.tags.length
+      ? h.tags.join(" · ")
+      : `Listed on ${h.platform}. Open the event page to register.`;
+
+  return {
+    _id: h.id,
+    id: h.id,
+    title: h.title,
+    description: desc,
+    organizerName: h.platform || "External",
+    location: "Online",
+    totalPrize: h.prize,
+    prize: h.prize,
+    imageUrl: h.image,
+    mode: "online",
+    calculatedStatus,
+    startDate: deadline || "See event page",
+    endDate: deadline,
+    tags: Array.isArray(h.tags) ? h.tags : [],
+    registrationUrl: h.url,
+    isLiveScraped: true,
+    sourcePlatform: h.platform
+  };
+}
 
 const getStatusTone = (status) => {
   if (status === "ongoing") return "bg-emerald-500/20 text-emerald-100 border-emerald-500/30";
@@ -46,18 +83,32 @@ const getHackathonStatus = (hackathon) => {
   return "ended";
 };
 
+function formatMockRow(h) {
+  const calculatedStatus = getHackathonStatus(h);
+  return {
+    ...h,
+    _id: h.id,
+    mode: h.type,
+    organizerName: h.organizer,
+    prize: h.totalPrize,
+    calculatedStatus
+  };
+}
+
 const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
   const [hackathons, setHackathons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [dataSource, setDataSource] = useState(""); // 'live' | 'local'
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError("");
 
+<<<<<<< HEAD
       // 1. JSON ki jagah ab hum Live Database se data fetch kar rahe hain
       const response = await apiClient.getHackathons({});
       const realDatabaseHackathons = response.hackathons || [];
@@ -76,6 +127,36 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
     } catch (err) {
       console.error("Error loading Database data:", err);
       setError("Failed to load hackathons from the Live Database.");
+=======
+      let rows = [];
+      try {
+        const res = await apiClient.getLiveScrapedHackathons();
+        const live = res.hackathons || [];
+        rows = live.map(mapLiveApiToCard);
+        if (rows.length > 0) {
+          setDataSource("live");
+        }
+      } catch (apiErr) {
+        console.warn("Live hackathons API:", apiErr?.message || apiErr);
+      }
+
+      if (rows.length === 0) {
+        rows = mockHackathons.map(formatMockRow);
+        setDataSource("local");
+      }
+
+      setHackathons(rows);
+    } catch (err) {
+      console.error("Error loading hackathons:", err);
+      setError("Could not load hackathons. Try again later.");
+      try {
+        const fallback = mockHackathons.map(formatMockRow);
+        setHackathons(fallback);
+        setDataSource("local");
+      } catch {
+        setHackathons([]);
+      }
+>>>>>>> 0698bc94902e4375fafc660c52f75294fb15af23
     } finally {
       setLoading(false);
     }
@@ -99,6 +180,7 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
         ${hackathon.description || ""} 
         ${hackathon.organizerName || ""} 
         ${hackathon.location || ""}
+        ${hackathon.sourcePlatform || ""}
       `.toLowerCase();
       
       const matchesSearch = !searchTerm || searchTarget.includes(searchTerm.toLowerCase().trim());
@@ -110,10 +192,10 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
     });
   }, [filterStatus, hackathons, searchTerm]);
 
-  // Handle direct redirect for "Register" button
   const handleRegister = (hackathon) => {
-    if (hackathon.registrationUrl) {
-      window.open(hackathon.registrationUrl, '_blank');
+    const url = hackathon.registrationUrl || hackathon.url;
+    if (url && String(url).startsWith("http")) {
+      window.open(url, "_blank", "noopener,noreferrer");
     } else {
       setError("Could not find a registration URL for this hackathon.");
       setTimeout(() => setError(""), 3000);
@@ -136,13 +218,15 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700">
               <Sparkles size={14} />
-              Live Discovery
+              {dataSource === "live" ? "Live feed (Devpost only)" : "Discovery"}
             </div>
             <h3 className="mt-4 text-3xl font-bold tracking-[-0.04em] text-slate-950">
               Explore Premium Hackathons
             </h3>
             <p className="mt-3 text-base leading-7 text-slate-600">
-              Discover cutting-edge events, compete with the best, and build the future.
+              {dataSource === "live"
+                ? "Live listings from the server (Devpost API only). Register opens the official event page."
+                : "Discover cutting-edge events, compete with the best, and build the future."}
             </p>
           </div>
 
@@ -233,7 +317,12 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
                     </span>
                   </div>
                   
-                  <div className="absolute right-5 top-5">
+                  <div className="absolute right-5 top-5 flex flex-col items-end gap-1">
+                    {hackathon.sourcePlatform && (
+                      <span className="rounded-full bg-black/40 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-md">
+                        {hackathon.sourcePlatform}
+                      </span>
+                    )}
                     <span className="flex items-center rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-md border border-white/20 capitalize">
                       {getModeIcon(hackathon.mode)}
                       {hackathon.mode}
@@ -256,7 +345,9 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
                 <div className="flex flex-1 flex-col p-6">
                   {/* Short description limit */}
                   <p className="text-sm leading-relaxed text-slate-600 line-clamp-2 mb-6">
-                    {hackathon.description.replace(/[#*]/g, '').trim()}
+                    {(hackathon.description || "")
+                      .replace(/[#*]/g, "")
+                      .trim()}
                   </p>
 
                   <div className="grid gap-3 sm:grid-cols-2 mb-6">
@@ -265,7 +356,9 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
                       <div>
                         <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Date</div>
                         <div className="text-sm font-semibold text-slate-900">
-                          {hackathon.startDate.replace("Posted", "").trim()}
+                          {String(hackathon.startDate || "")
+                            .replace("Posted", "")
+                            .trim() || "TBA"}
                         </div>
                       </div>
                     </div>
@@ -297,7 +390,18 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
 
                   {/* Action Buttons */}
                   <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
-                    {hackathon.calculatedStatus === "ongoing" ? (
+                    {hackathon.isLiveScraped &&
+                    hackathon.registrationUrl &&
+                    String(hackathon.registrationUrl).startsWith("http") ? (
+                      <a
+                        href={hackathon.registrationUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3.5 text-sm font-bold text-violet-700 transition-colors duration-200 hover:bg-violet-100 text-center"
+                      >
+                        View Details
+                      </a>
+                    ) : hackathon.calculatedStatus === "ongoing" ? (
                       <Link
                         to={`/hackathon/${hackathon._id || hackathon.id}`}
                         className="flex-1 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3.5 text-sm font-bold text-violet-700 transition-colors duration-200 hover:bg-violet-100 text-center"

@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:all": "concurrently \"npm run dev\" \"npm run server:start\"",
+    "dev": "concurrently -n web,api -c cyan,magenta \"vite\" \"npm run server:start\"",
+    "dev:vite": "vite",
+    "dev:all": "concurrently -n web,api -c cyan,magenta \"vite\" \"npm run server:start\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

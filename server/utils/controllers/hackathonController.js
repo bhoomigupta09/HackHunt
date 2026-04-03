@@ -8,6 +8,24 @@ const {
 } = require("../../services/hackathonService");
 const { broadcast, createActivity } = require("../../utils/realtimeHub");
 const mongoose = require("mongoose");
+const { getLiveScrapedHackathons } = require("../scrapers/liveHackathonScraper");
+
+const getLiveHackathons = async (req, res) => {
+  try {
+    const forceRefresh =
+      req.query.refresh === "1" ||
+      req.query.refresh === "true" ||
+      req.query.nocache === "1";
+    const body = await getLiveScrapedHackathons({ forceRefresh });
+    res.json(body);
+  } catch (error) {
+    console.error("Error in getLiveHackathons:", error.message);
+    res.status(500).json({
+      message: "Failed to fetch live hackathons",
+      error: error.message
+    });
+  }
+};
 
 const getHackathons = async (req, res) => {
   try {
@@ -525,6 +543,7 @@ module.exports = {
   getAdminHackathons,
   getHackathonById,
   getHackathons,
+  getLiveHackathons,
   getHackathonStats,
   getOrganizerHackathons,
   getUserRegistrations,

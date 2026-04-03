@@ -7,6 +7,7 @@ import logoImg from '../../assets/logo.png';
 const Header = () => {
   const { pathname } = useLocation();
   const isHomePage = pathname === '/';
+  const isDarkHero = pathname === '/' || pathname === '/hackathons';
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
@@ -49,9 +50,15 @@ const Header = () => {
   ];
 
   return (
+<<<<<<< HEAD
     <>
       <header className={`sticky top-0 z-50 border-b backdrop-blur-xl ${
         isHomePage
+=======
+    <header
+      className={`sticky top-0 z-50 border-b backdrop-blur-xl ${
+        isDarkHero
+>>>>>>> 0698bc94902e4375fafc660c52f75294fb15af23
           ? 'border-white/8 bg-[#0d0a18]/85 shadow-[0_18px_45px_rgba(3,7,18,0.45)]'
           : 'border-white/60 bg-white/75 shadow-[0_12px_40px_rgba(15,23,42,0.08)]'
       }`}>
@@ -79,7 +86,7 @@ const Header = () => {
                   <img src={logoImg} alt="HackHunt logo" className="h-full w-auto object-contain" />
                 </div>
                 <span className={`text-4xl font-extrabold bg-gradient-to-r bg-clip-text text-transparent ${
-                  isHomePage
+                  isDarkHero
                     ? 'from-white via-violet-100 to-cyan-200'
                     : 'from-violet-600 via-purple-600 to-blue-600'
                 }`}>
@@ -88,12 +95,19 @@ const Header = () => {
               </Link>
             </div>
 
+<<<<<<< HEAD
             {/* ── RIGHT: Login / Signup — exactly like original ── */}
             <nav className="flex items-center space-x-3">
               <NavbarDropdownButton label="Login" items={loginItems} variant={isHomePage ? 'ghost-dark' : 'filled'} />
+=======
+          <nav className="hidden items-center gap-10 lg:flex">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <NavbarDropdownButton label="Login" items={loginItems} variant={isDarkHero ? 'ghost-dark' : 'filled'} />
+>>>>>>> 0698bc94902e4375fafc660c52f75294fb15af23
               <NavbarDropdownButton label="Sign up" items={signupItems} variant="filled" />
             </nav>
 
+<<<<<<< HEAD
           </div>
         </div>
       </header>
@@ -231,6 +245,12 @@ const Header = () => {
           <p style={{ textAlign: 'center', fontSize: '11px', color: '#334155', marginTop: '12px' }}>
             © 2026 HackHunt
           </p>
+=======
+          <nav className="flex items-center space-x-3 lg:hidden">
+            <NavbarDropdownButton label="Login" items={loginItems} variant={isDarkHero ? 'ghost-dark' : 'filled'} />
+            <NavbarDropdownButton label="Sign up" items={signupItems} variant="filled" />
+          </nav>
+>>>>>>> 0698bc94902e4375fafc660c52f75294fb15af23
         </div>
       </div>
     </>

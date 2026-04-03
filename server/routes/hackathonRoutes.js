@@ -6,6 +6,7 @@ const {
   getAdminHackathons,
   getHackathonById,
   getHackathons,
+  getLiveHackathons,
   getHackathonStats,
   getOrganizerHackathons,
   getUserRegistrations,
@@ -16,6 +17,7 @@ const {
 } = require("../utils/controllers/hackathonController");
 
 router.get("/", getHackathons);
+router.get("/live", getLiveHackathons);
 router.get("/stats", getHackathonStats);
 router.get("/admin/all", getAdminHackathons);
 router.get("/organizer/:organizerId", getOrganizerHackathons);

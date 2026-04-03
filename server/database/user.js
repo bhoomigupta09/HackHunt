@@ -2,7 +2,7 @@ const { Router } = require("express");
 const bcryptjs = require("bcryptjs");
 const mongoose = require("mongoose");
 const { broadcast, createActivity } = require("../utils/realtimeHub");
-const { isEmailDomainAllowed, allowedEmailDomains } = require("../utils/validation");
+const { isValidEmail } = require("../utils/validation");
 
 const userRouter = Router();
 const Schema = mongoose.Schema;
@@ -99,6 +99,23 @@ const getModelForRole = (role = "user") => {
   return User;
 };
 
+const normalizeSignupInput = ({
+  email,
+  password,
+  firstName,
+  lastName,
+  phoneNumber,
+  organizationName = null
+} = {}) => ({
+  email: String(email || "").trim().toLowerCase(),
+  password: String(password || ""),
+  firstName: String(firstName || "").trim(),
+  lastName: String(lastName || "").trim(),
+  phoneNumber: String(phoneNumber || "").replace(/\D/g, ""),
+  organizationName:
+    organizationName === null ? null : String(organizationName || "").trim()
+});
+
 const validateSignupInput = (
   email,
   password,
@@ -108,20 +125,30 @@ const validateSignupInput = (
   organizationName = null
 ) => {
   const errors = [];
-  const normalizedPhoneNumber = String(phoneNumber || "").replace(/\D/g, "");
+  const normalized = normalizeSignupInput({
+    email,
+    password,
+    firstName,
+    lastName,
+    phoneNumber,
+    organizationName
+  });
 
-  if (!email || !/^[^\s@]+@gmail\.com$/i.test(email.trim())) {
-    errors.push("Please provide a valid @gmail.com email address");
+  if (!normalized.email || !isValidEmail(normalized.email)) {
+    errors.push("Please provide a valid email address");
   }
-  if (!password || password.length < 8) {
+  if (!normalized.password || normalized.password.length < 8) {
     errors.push("Password must be at least 8 characters");
   }
-  if (!firstName) errors.push("First name is required");
-  if (!lastName) errors.push("Last name is required");
-  if (!normalizedPhoneNumber || !/^(\d{10}|0\d{10}|91\d{10})$/.test(normalizedPhoneNumber)) {
+  if (!normalized.firstName) errors.push("First name is required");
+  if (!normalized.lastName) errors.push("Last name is required");
+  if (
+    !normalized.phoneNumber ||
+    !/^(\d{10}|0\d{10}|91\d{10})$/.test(normalized.phoneNumber)
+  ) {
     errors.push("Phone number must be 10 digits, or include a leading 0 / 91");
   }
-  if (organizationName !== null && !organizationName) {
+  if (normalized.organizationName !== null && !normalized.organizationName) {
     errors.push("Organization name is required for organizers");
   }
 
@@ -435,4 +462,13 @@ userRouter.put("/profile/:userId/:role", async (req, res) => {
   }
 });
 
-module.exports = { User, Organizer, Admin, userRouter };
+module.exports = {
+  User,
+  Organizer,
+  Admin,
+  userRouter,
+  normalizeSignupInput,
+  validateSignupInput,
+  hashPassword,
+  getModelForRole
+};
