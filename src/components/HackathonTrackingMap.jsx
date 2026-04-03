@@ -57,8 +57,7 @@ const HackathonTrackingMap = () => {
     try {
       const cleanStartDateStr = (hackathon.startDate || "").replace("Posted ", "").trim();
       const start = new Date(cleanStartDateStr);
-      const end = hackathon.endDate ? new Date(hackathon.endDate) : new Date(start.getTime() + (3 * 24 * 60 * 60 * 1000));
-      const now = new Date();
+      const now = new Date("2024-10-15");
 
       if (!isNaN(end.getTime()) && end < now) return "ended";
       if (!isNaN(start.getTime()) && start > now) return "upcoming";

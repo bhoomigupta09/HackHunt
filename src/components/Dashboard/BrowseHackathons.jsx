@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 // IMPORT YOUR LOCAL JSON DATA HERE
-import mockHackathons from "../../data/unstop_scraped_data.json";
+import { apiClient } from "../../api/client";
 
 const getStatusTone = (status) => {
   if (status === "ongoing") return "bg-emerald-500/20 text-emerald-100 border-emerald-500/30";
@@ -58,25 +58,28 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
       setLoading(true);
       setError("");
 
-      const formattedMockData = mockHackathons.map((h) => ({
+      // 1. JSON ki jagah ab hum Live Database se data fetch kar rahe hain
+      const response = await apiClient.getHackathons({});
+      const realDatabaseHackathons = response.hackathons || [];
+
+      // 2. Data ko apke frontend ke design ke hisaab se format kar rahe hain
+      const formattedData = realDatabaseHackathons.map((h) => ({
         ...h,
         _id: h.id, 
         mode: h.type, 
         organizerName: h.organizer, 
         prize: h.totalPrize,
-        // Calculate standard status immediately
         calculatedStatus: getHackathonStatus(h) 
       }));
 
-      setHackathons(formattedMockData);
+      setHackathons(formattedData);
     } catch (err) {
-      console.error("Error loading JSON data:", err);
-      setError("Failed to load hackathons from the JSON file.");
+      console.error("Error loading Database data:", err);
+      setError("Failed to load hackathons from the Live Database.");
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     loadData();
   }, []);
