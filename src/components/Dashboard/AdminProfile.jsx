@@ -153,14 +153,16 @@ const AdminProfile = ({ user }) => {
     }
   };
 
+  const inputClasses = `mt-2 w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 outline-none transition duration-200 placeholder:text-slate-400 focus:border-rose-300 focus:ring-4 focus:ring-rose-500/10 disabled:cursor-not-allowed disabled:bg-slate-100/90 disabled:text-slate-500 dark:border-white/10 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-400 dark:disabled:bg-slate-800/50 dark:disabled:text-slate-500`;
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Security Warning */}
-      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg flex items-start space-x-3">
-        <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
+      <div className="flex items-start space-x-3 rounded-r-2xl border-l-4 border-indigo-400 bg-indigo-100/80 p-4 text-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-100">
+        <AlertCircle className="text-indigo-300 flex-shrink-0 mt-0.5" size={20} />
         <div>
-          <h3 className="font-medium text-yellow-800">Admin Access</h3>
-          <p className="text-sm text-yellow-700 mt-1">
+          <h3 className="font-medium text-indigo-900 dark:text-indigo-100">Admin Access</h3>
+          <p className="mt-1 text-sm text-indigo-700 dark:text-indigo-200">
             You have elevated privileges on this platform. Handle sensitive data responsibly.
           </p>
         </div>
@@ -169,8 +171,8 @@ const AdminProfile = ({ user }) => {
       {/* Profile Header */}
       <div className="flex justify-between items-start animate-slideDown">
         <div>
-          <h3 className="text-2xl font-bold text-gray-800">Administrator Profile</h3>
-          <p className="text-gray-600 mt-1">Manage your administrator account information</p>
+          <h3 className="text-2xl font-bold text-slate-950 dark:text-slate-50">Administrator Profile</h3>
+          <p className="mt-1 text-slate-500 dark:text-slate-400">Manage your administrator account information</p>
         </div>
         <button
           onClick={() => {
@@ -181,7 +183,7 @@ const AdminProfile = ({ user }) => {
             }
           }}
           disabled={loading}
-          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:from-red-600 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-400 transition duration-200"
+          className="flex items-center space-x-2 rounded-2xl bg-gradient-to-r from-red-500 to-pink-600 px-4 py-2.5 text-white transition duration-200 hover:from-red-600 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-400"
         >
           {isEditing ? (
             <>
@@ -199,7 +201,7 @@ const AdminProfile = ({ user }) => {
 
       {/* Error and Success Messages */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
           {error}
           <button onClick={() => setError("")}>
             <X size={18} />
@@ -208,7 +210,7 @@ const AdminProfile = ({ user }) => {
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-green-700 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-300">
           {success}
           <button onClick={() => setSuccess("")}>
             <X size={18} />
@@ -220,7 +222,7 @@ const AdminProfile = ({ user }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slideUp">
         {/* First Name */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
             First Name *
           </label>
           <input
@@ -229,15 +231,13 @@ const AdminProfile = ({ user }) => {
             value={profileData.firstName}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-              !isEditing ? "bg-gray-50 cursor-not-allowed" : "bg-white"
-            }`}
+            className={inputClasses}
           />
         </div>
 
         {/* Last Name */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
             Last Name *
           </label>
           <input
@@ -246,15 +246,13 @@ const AdminProfile = ({ user }) => {
             value={profileData.lastName}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-              !isEditing ? "bg-gray-50 cursor-not-allowed" : "bg-white"
-            }`}
+            className={inputClasses}
           />
         </div>
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
             Email *
           </label>
           <input
@@ -263,15 +261,13 @@ const AdminProfile = ({ user }) => {
             value={profileData.email}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-              !isEditing ? "bg-gray-50 cursor-not-allowed" : "bg-white"
-            }`}
+            className={inputClasses}
           />
         </div>
 
         {/* Phone Number */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
             Phone Number
           </label>
           <input
@@ -280,15 +276,13 @@ const AdminProfile = ({ user }) => {
             value={profileData.phoneNumber}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-              !isEditing ? "bg-gray-50 cursor-not-allowed" : "bg-white"
-            }`}
+            className={inputClasses}
           />
         </div>
 
         {/* Admin Level */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
             Admin Level
           </label>
           <select
@@ -296,9 +290,7 @@ const AdminProfile = ({ user }) => {
             value={profileData.adminLevel}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-              !isEditing ? "bg-gray-50 cursor-not-allowed" : "bg-white"
-            }`}
+            className={inputClasses}
           >
             <option value="super_admin">Super Administrator</option>
             <option value="moderator">Moderator</option>
@@ -308,7 +300,7 @@ const AdminProfile = ({ user }) => {
 
         {/* Department */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
             Department
           </label>
           <input
@@ -317,55 +309,53 @@ const AdminProfile = ({ user }) => {
             value={profileData.department}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-              !isEditing ? "bg-gray-50 cursor-not-allowed" : "bg-white"
-            }`}
+            className={inputClasses}
           />
         </div>
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-gray-200">
-        <div className="bg-gradient-to-br from-red-50 to-pink-50 p-6 rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-fadeIn" style={{ animationDelay: '0ms' }}>
+      <div className="mt-8 grid grid-cols-1 gap-4 border-t border-slate-200 pt-8 dark:border-white/10 md:grid-cols-4">
+        <div className="animate-fadeIn rounded-[24px] border border-red-100 bg-gradient-to-br from-red-50 to-pink-50 p-6 transition-all duration-300 hover:scale-105 hover:shadow-lg dark:border-red-500/20 dark:from-red-500/10 dark:to-slate-900" style={{ animationDelay: '0ms' }}>
           <div className="flex items-center justify-between">
             <div>
               <div className="text-3xl font-bold text-red-600 transition-all duration-300">{platformStats.totalUsers}</div>
-              <p className="text-gray-600 mt-2 text-sm">Total Users</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Total Users</p>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/15">
               <Users size={24} className="text-red-600" />
             </div>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-fadeIn" style={{ animationDelay: '100ms' }}>
+        <div className="animate-fadeIn rounded-[24px] border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-6 transition-all duration-300 hover:scale-105 hover:shadow-lg dark:border-blue-500/20 dark:from-blue-500/10 dark:to-slate-900" style={{ animationDelay: '100ms' }}>
           <div className="flex items-center justify-between">
             <div>
               <div className="text-3xl font-bold text-blue-600 transition-all duration-300">{platformStats.activeOrganizers}</div>
-              <p className="text-gray-600 mt-2 text-sm">Active Organizers</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Active Organizers</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center animate-pulse">
+            <div className="flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-blue-100 dark:bg-blue-500/15">
               <ShieldCheck size={24} className="text-blue-600" />
             </div>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-fadeIn" style={{ animationDelay: '200ms' }}>
+        <div className="animate-fadeIn rounded-[24px] border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-6 transition-all duration-300 hover:scale-105 hover:shadow-lg dark:border-green-500/20 dark:from-green-500/10 dark:to-slate-900" style={{ animationDelay: '200ms' }}>
           <div className="flex items-center justify-between">
             <div>
               <div className="text-3xl font-bold text-green-600 transition-all duration-300">{platformStats.activeHackathons}</div>
-              <p className="text-gray-600 mt-2 text-sm">Active Hackathons</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Active Hackathons</p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-500/15">
               <ClipboardList size={24} className="text-green-600" />
             </div>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105 animate-fadeIn" style={{ animationDelay: '300ms' }}>
+        <div className="animate-fadeIn rounded-[24px] border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-6 transition-all duration-300 hover:scale-105 hover:shadow-lg dark:border-purple-500/20 dark:from-purple-500/10 dark:to-slate-900" style={{ animationDelay: '300ms' }}>
           <div className="flex items-center justify-between">
             <div>
               <div className="text-3xl font-bold text-purple-600 transition-all duration-300">{platformStats.totalRegistrations}</div>
-              <p className="text-gray-600 mt-2 text-sm">Total Registrations</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Total Registrations</p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-500/15">
               <Activity size={24} className="text-purple-600" />
             </div>
           </div>
@@ -373,24 +363,24 @@ const AdminProfile = ({ user }) => {
       </div>
 
       {/* Permissions */}
-      <div className="mt-8 pt-8 border-t border-gray-200">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">Your Permissions</h3>
+      <div className="mt-8 border-t border-slate-200 pt-8 dark:border-white/10">
+        <h3 className="mb-4 text-lg font-bold text-slate-950 dark:text-slate-50">Your Permissions</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+          <div className="flex items-center space-x-3 rounded-2xl bg-green-50 p-3 dark:bg-green-500/10">
             <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-            <span className="text-sm text-gray-700">Manage Users & Organizers</span>
+            <span className="text-sm text-slate-700 dark:text-slate-200">Manage Users & Organizers</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+          <div className="flex items-center space-x-3 rounded-2xl bg-green-50 p-3 dark:bg-green-500/10">
             <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-            <span className="text-sm text-gray-700">Monitor Hackathons</span>
+            <span className="text-sm text-slate-700 dark:text-slate-200">Monitor Hackathons</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+          <div className="flex items-center space-x-3 rounded-2xl bg-green-50 p-3 dark:bg-green-500/10">
             <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-            <span className="text-sm text-gray-700">View Analytics & Reports</span>
+            <span className="text-sm text-slate-700 dark:text-slate-200">View Analytics & Reports</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+          <div className="flex items-center space-x-3 rounded-2xl bg-green-50 p-3 dark:bg-green-500/10">
             <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-            <span className="text-sm text-gray-700">System Configuration</span>
+            <span className="text-sm text-slate-700 dark:text-slate-200">System Configuration</span>
           </div>
         </div>
       </div>

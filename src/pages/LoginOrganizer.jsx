@@ -120,6 +120,12 @@ const LoginOrganizer = () => {
           </button>
         </form>
 
+        <div className="mt-4 text-center text-sm text-amber-200">
+          <Link to="/" className="hover:text-white">
+            ← Back to Home
+          </Link>
+        </div>
+
         <div className="mt-8 text-center text-sm text-slate-400">
           Don&apos;t have an account?{" "}
           <Link to="/signup-organizer" className="text-amber-400 hover:text-amber-300 font-semibold">

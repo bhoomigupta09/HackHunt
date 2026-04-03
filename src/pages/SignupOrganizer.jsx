@@ -220,6 +220,11 @@ const SignupOrganizer = () => {
             Sign in here
           </Link>
         </div>
+        <div className="mt-2 text-center text-sm text-amber-200">
+          <Link to="/" className="hover:text-white">
+            ← Back to Home
+          </Link>
+        </div>
       </div>
     </div>
   );

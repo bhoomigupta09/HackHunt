@@ -59,7 +59,7 @@ const AdminActivityLog = () => {
   });
 
   if (loading) {
-    return <div className="py-16 text-center text-slate-500">Loading activity log...</div>;
+    return <div className="py-16 text-center text-slate-500 dark:text-slate-400">Loading activity log...</div>;
   }
 
   const getActionColor = (action) => {
@@ -75,39 +75,39 @@ const AdminActivityLog = () => {
   return (
     <div className="space-y-6 animate-fadeIn">
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
           {error}
         </div>
       )}
 
-      <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)] animate-slideUp transition-all duration-300 hover:shadow-[0_18px_80px_rgba(15,23,42,0.12)]">
-        <h3 className="text-2xl font-bold text-slate-950 mb-2 animate-fadeIn">Admin Activity Log</h3>
-        <p className="text-sm text-slate-600 animate-fadeIn" style={{ animationDelay: '100ms' }}>
+      <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)] animate-slideUp transition-all duration-300 hover:shadow-[0_18px_80px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-slate-900/75 dark:shadow-[0_18px_60px_rgba(2,6,23,0.45)]">
+        <h3 className="mb-2 text-2xl font-bold text-slate-950 animate-fadeIn dark:text-slate-50">Admin Activity Log</h3>
+        <p className="text-sm text-slate-600 animate-fadeIn dark:text-slate-300" style={{ animationDelay: '100ms' }}>
           Review the latest platform events, approvals, registrations, and moderation changes.
         </p>
 
         <div className="mt-6 space-y-3">
           {logs.length > 0 ? (
             logs.map((item, idx) => (
-              <div key={item.id} className="rounded-2xl bg-slate-50 px-4 py-4 hover:bg-slate-100 transition-all duration-300 transform hover:translate-x-1 border-l-4 border-transparent hover:border-slate-300 animate-slideUp" style={{ animationDelay: `${Math.min(idx * 30, 300)}ms` }}>
+              <div key={item.id} className="rounded-2xl border-l-4 border-transparent bg-slate-50 px-4 py-4 transition-all duration-300 transform hover:translate-x-1 hover:border-slate-300 hover:bg-slate-100 animate-slideUp dark:bg-slate-800/70 dark:hover:bg-slate-800" style={{ animationDelay: `${Math.min(idx * 30, 300)}ms` }}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <div>
-                      <p className="font-semibold text-slate-900">{item.performedBy || "System"}</p>
-                      {item.description && <p className="text-sm text-slate-600">{item.description}</p>}
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">{item.performedBy || "System"}</p>
+                      {item.description && <p className="text-sm text-slate-600 dark:text-slate-300">{item.description}</p>}
                     </div>
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize transition-all duration-300 ${getActionColor(item.action)}`}>
                       {String(item.action || "activity").replace(/_/g, " ")}
                     </span>
                   </div>
-                  <time className="text-xs text-slate-400 whitespace-nowrap">
+                  <time className="whitespace-nowrap text-xs text-slate-400 dark:text-slate-500">
                     {new Date(item.timestamp).toLocaleString()}
                   </time>
                 </div>
               </div>
             ))
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500 animate-fadeIn">
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500 animate-fadeIn dark:border-white/10 dark:text-slate-400">
               No activity yet.
             </div>
           )}

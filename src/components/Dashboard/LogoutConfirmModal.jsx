@@ -7,16 +7,16 @@ const LogoutConfirmModal = ({ open, onCancel, onConfirm }) => {
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-[28px] border border-white/40 bg-white p-6 shadow-2xl">
-        <h3 className="text-2xl font-bold tracking-tight text-slate-950">Confirm Logout</h3>
-        <p className="mt-3 text-sm leading-6 text-slate-600">
+      <div className="w-full max-w-md rounded-[28px] border border-white/40 bg-white p-6 shadow-2xl transition-colors duration-300 dark:border-white/10 dark:bg-slate-900">
+        <h3 className="text-2xl font-bold tracking-tight text-slate-950 transition-colors duration-300 dark:text-slate-100">Confirm Logout</h3>
+        <p className="mt-3 text-sm leading-6 text-slate-600 transition-colors duration-300 dark:text-slate-300">
           Are you sure you want to log out of your account?
         </p>
 
         <div className="mt-6 flex justify-end gap-3">
           <button
             onClick={onCancel}
-            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             Cancel
           </button>

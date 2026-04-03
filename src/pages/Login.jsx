@@ -128,6 +128,11 @@ const Login = () => {
             Sign up
           </Link>
         </p>
+        <p className="text-center text-sm text-gray-500 mt-2">
+          <Link to="/" className="text-purple-600 hover:underline">
+            Back to Home
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -494,7 +494,23 @@ const registerForHackathon = async (req, res) => {
 const unregisterFromHackathon = async (req, res) => {
   try {
     const { registrationId } = req.params;
-    const registration = await HackathonRegistration.findById(registrationId);
+    const { userId, hackathonId } = req.body || {};
+    let registration = null;
+
+    if (mongoose.Types.ObjectId.isValid(registrationId)) {
+      registration = await HackathonRegistration.findById(registrationId);
+    }
+
+    if (!registration && userId) {
+      const targetHackathonId = hackathonId || registrationId;
+
+      if (mongoose.Types.ObjectId.isValid(targetHackathonId)) {
+        registration = await HackathonRegistration.findOne({
+          userId,
+          hackathonId: targetHackathonId
+        });
+      }
+    }
 
     if (!registration) {
       return res.status(404).json({ message: "Registration not found." });
@@ -505,7 +521,7 @@ const unregisterFromHackathon = async (req, res) => {
       Hackathon.findById(registration.hackathonId)
     ]);
 
-    await HackathonRegistration.findByIdAndDelete(registrationId);
+    await HackathonRegistration.findByIdAndDelete(registration._id);
 
     if (user) {
       user.joinedHackathons = (user.joinedHackathons || []).filter(
@@ -517,7 +533,7 @@ const unregisterFromHackathon = async (req, res) => {
     broadcast("registration:deleted", {
       hackathonId: String(registration.hackathonId),
       userId: String(registration.userId),
-      registrationId
+      registrationId: String(registration._id)
     });
     if (user && hackathon) {
       createActivity({

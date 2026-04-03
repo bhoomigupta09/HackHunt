@@ -277,6 +277,11 @@ const SignupAdmin = () => {
             Sign in here
           </Link>
         </div>
+        <div className="mt-2 text-center text-sm text-red-500">
+          <Link to="/" className="hover:text-red-700">
+            ← Back to Home
+          </Link>
+        </div>
       </div>
     </div>
   );

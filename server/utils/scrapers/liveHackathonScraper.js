@@ -1,8 +1,5 @@
 /**
- * Live hackathon listings merged from hackathon-tracker:
- * - Devpost: official JSON API
- * - Unstop: Puppeteer + network JSON capture
- * - DoraHacks: public JSON API
+ * Live hackathon listings from Devpost only.
  *
  * 30-minute in-memory cache. Use ?refresh=1 to bypass.
  */
@@ -14,8 +11,6 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const scrapeDevpost = require("./tracker/devpost");
-const scrapeUnstop = require("./tracker/unstop");
-const scrapeDoraHacks = require("./tracker/dorahacks");
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
@@ -73,26 +68,14 @@ function inferTitleFromUrl(url) {
 }
 
 async function runScrapers() {
-  const settled = await Promise.allSettled([
-    scrapeDevpost(3),
-    scrapeUnstop(),
-    scrapeDoraHacks()
-  ]);
+  const settled = await Promise.allSettled([scrapeDevpost(3)]);
 
   const sources = {
-    Devpost: settled[0].status === "fulfilled" ? "ok" : "error",
-    Unstop: settled[1].status === "fulfilled" ? "ok" : "error",
-    DoraHacks: settled[2].status === "fulfilled" ? "ok" : "error"
+    Devpost: settled[0].status === "fulfilled" ? "ok" : "error"
   };
 
   if (settled[0].status === "rejected") {
     console.warn("[liveScraper] Devpost", settled[0].reason?.message);
-  }
-  if (settled[1].status === "rejected") {
-    console.warn("[liveScraper] Unstop", settled[1].reason?.message);
-  }
-  if (settled[2].status === "rejected") {
-    console.warn("[liveScraper] DoraHacks", settled[2].reason?.message);
   }
 
   const merged = [];

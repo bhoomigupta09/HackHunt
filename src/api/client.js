@@ -283,9 +283,12 @@ class APIClient {
     });
   }
 
-  async unregisterFromHackathon(registrationId) {
+  async unregisterFromHackathon(registrationId, payload = {}) {
+    const hasPayload = payload && Object.keys(payload).length > 0;
+
     return this.request(`/hackathons/registrations/${registrationId}`, {
       method: 'DELETE',
+      ...(hasPayload ? { body: JSON.stringify(payload) } : {}),
     });
   }
 

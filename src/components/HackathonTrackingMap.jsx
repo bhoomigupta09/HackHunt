@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MapPin, Search, X, Globe, Calendar, Clock, CheckCircle } from "lucide-react";
+import { Calendar, CheckCircle, Clock, Compass, Globe, MapPin, Radar, Search, X } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -39,8 +39,6 @@ const hasValidCoordinates = (hackathon) =>
   Number.isFinite(Number(hackathon?.latitude)) &&
   Number.isFinite(Number(hackathon?.longitude));
 
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 const HackathonTrackingMap = () => {
   const [hackathons, setHackathons] = useState([]);
   const [filteredHackathons, setFilteredHackathons] = useState([]);
@@ -54,6 +52,13 @@ const HackathonTrackingMap = () => {
 
   // Determine Status
   const getHackathonStatus = useCallback((hackathon) => {
+    // Priority 1: Check status field first - this is most reliable
+    const normalizedStatus = String(hackathon?.status || "").toLowerCase();
+    if (normalizedStatus === "open" || normalizedStatus === "active") return "ongoing";
+    if (normalizedStatus === "ended" || normalizedStatus === "closed") return "ended";
+    if (normalizedStatus === "upcoming" || normalizedStatus === "scheduled") return "upcoming";
+
+    // Priority 2: Fall back to date-based logic only if status doesn't tell us
     try {
       const cleanStartDateStr = (hackathon.startDate || "").replace("Posted ", "").trim();
       const start = new Date(cleanStartDateStr);
@@ -65,9 +70,8 @@ const HackathonTrackingMap = () => {
       if (!isNaN(start.getTime()) && start <= now && end >= now) return "ongoing";
     } catch (e) {}
     
-    const normalized = String(hackathon?.status || "").toLowerCase();
-    if (normalized === "open" || normalized === "active") return "ongoing";
-    return "ended";
+    // Priority 3: Safe default
+    return "upcoming";
   }, []);
 
   // AUTO-GEOCODER
@@ -291,40 +295,42 @@ const HackathonTrackingMap = () => {
 
   if (loading) {
     return (
-      <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="h-[500px] w-full rounded-2xl bg-slate-50 flex flex-col items-center justify-center">
+      <div className="rounded-[32px] border border-white/70 bg-white/80 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-slate-900/70 dark:shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+        <div className="flex h-[500px] w-full flex-col items-center justify-center rounded-[28px] bg-slate-50 dark:bg-slate-800/70">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-violet-500 border-t-transparent mb-4"></div>
-          <p className="text-slate-700 font-bold">Loading Map Data...</p>
+          <p className="font-bold text-slate-700 dark:text-slate-200">Loading Map Data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-      
-      {/* 1. Header & Live Search Bar */}
-      <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
-        <div>
-          <h3 className="text-2xl font-bold text-slate-950">Hackathon Radar</h3>
-          <p className="text-sm text-slate-500 mt-1">
+    <div className="space-y-6 rounded-[34px] border border-white/70 bg-[radial-gradient(circle_at_top_right,rgba(167,139,250,0.18),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.92),rgba(248,250,252,0.82))] p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_right,rgba(167,139,250,0.16),transparent_24%),linear-gradient(135deg,rgba(30,41,59,0.96),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-2xl">
+          <div className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+            <Radar size={14} />
+            Live tracking
+          </div>
+          <h3 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-slate-950 dark:text-slate-50">Hackathon Radar</h3>
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-300 sm:text-base">
             Search locations and track events in real-time.
           </p>
         </div>
 
-        <div className="w-full lg:w-96 relative">
+        <div className="relative w-full lg:w-[28rem]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
           <input
             type="text"
             placeholder="Type city (e.g., Delhi, Pune)..."
             value={searchLocation}
-            onChange={(e) => setSearchLocation(e.target.value)} // INSTANT SEARCH
-            className="w-full pl-12 pr-10 py-3.5 border border-slate-300 bg-slate-50 hover:bg-white rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all shadow-inner"
+            onChange={(e) => setSearchLocation(e.target.value)}
+            className="w-full rounded-2xl border border-slate-200 bg-white/85 py-3.5 pl-12 pr-10 text-sm font-medium text-slate-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-all focus:border-violet-300 focus:ring-4 focus:ring-violet-500/10 dark:border-white/10 dark:bg-slate-800/80 dark:text-slate-100"
           />
           {searchLocation && (
             <button
               onClick={() => setSearchLocation("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-700"
             >
               <X size={18} />
             </button>
@@ -332,76 +338,86 @@ const HackathonTrackingMap = () => {
         </div>
       </div>
 
-      {/* 2. Live Stats Dashboard */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center gap-4">
-          <div className="p-3 bg-white rounded-xl shadow-sm"><MapPin className="text-violet-600" size={20}/></div>
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+        <div className="flex items-center gap-4 rounded-[24px] border border-slate-200 bg-white/80 p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 dark:border-white/10 dark:bg-slate-800/80">
+          <div className="rounded-2xl bg-violet-50 p-3 shadow-sm"><MapPin className="text-violet-600" size={20} /></div>
           <div>
-            <p className="text-xs font-bold text-slate-500 uppercase">Total Events</p>
-            <p className="text-2xl font-black text-slate-900">{stats.total}</p>
+            <p className="text-xs font-bold uppercase text-slate-500 dark:text-slate-500">Total Events</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-slate-50">{stats.total}</p>
           </div>
         </div>
-        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-4">
-          <div className="p-3 bg-white rounded-xl shadow-sm"><CheckCircle className="text-emerald-500" size={20}/></div>
+        <div className="flex items-center gap-4 rounded-[24px] border border-emerald-100 bg-emerald-50 p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+          <div className="rounded-2xl bg-white p-3 shadow-sm"><CheckCircle className="text-emerald-500" size={20} /></div>
           <div>
             <p className="text-xs font-bold text-emerald-700 uppercase">Ongoing</p>
             <p className="text-2xl font-black text-emerald-900">{stats.ongoing}</p>
           </div>
         </div>
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center gap-4">
-          <div className="p-3 bg-white rounded-xl shadow-sm"><Calendar className="text-blue-500" size={20}/></div>
+        <div className="flex items-center gap-4 rounded-[24px] border border-blue-100 bg-blue-50 p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 dark:border-blue-500/20 dark:bg-blue-500/10">
+          <div className="rounded-2xl bg-white p-3 shadow-sm"><Calendar className="text-blue-500" size={20} /></div>
           <div>
             <p className="text-xs font-bold text-blue-700 uppercase">Upcoming</p>
             <p className="text-2xl font-black text-blue-900">{stats.upcoming}</p>
           </div>
         </div>
-        <div className="bg-slate-100 border border-slate-200 rounded-2xl p-4 flex items-center gap-4 opacity-70">
-          <div className="p-3 bg-white rounded-xl shadow-sm"><Clock className="text-slate-500" size={20}/></div>
+        <div className="flex items-center gap-4 rounded-[24px] border border-slate-200 bg-slate-100 p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 dark:border-white/10 dark:bg-slate-800/80">
+          <div className="rounded-2xl bg-white p-3 shadow-sm"><Clock className="text-slate-500" size={20} /></div>
           <div>
             <p className="text-xs font-bold text-slate-500 uppercase">Ended</p>
             <p className="text-2xl font-black text-slate-700">{stats.ended}</p>
           </div>
         </div>
-      </div>
-
-      {/* 3. Status Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm font-bold text-slate-700 mr-2">Filter Status:</span>
-        {STATUS_OPTIONS.map((status) => (
-          <button
-            key={status}
-            onClick={() => setSelectedStatus(status)}
-            className={`px-5 py-2 rounded-xl text-sm font-bold capitalize transition-all ${
-              selectedStatus === status
-                ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
-                : "bg-white border border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50"
-            }`}
-          >
-            {status}
-          </button>
-        ))}
-
-        {stats.online > 0 && (
-          <div className="ml-auto flex items-center gap-2 rounded-xl bg-violet-50 border border-violet-100 px-4 py-2 text-xs font-bold text-violet-700">
-            <Globe size={16} />
-            {stats.online} Online Events (Not on map)
+        <div className="col-span-2 flex items-center gap-4 rounded-[24px] border border-violet-100 bg-violet-50/80 p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 dark:border-violet-500/20 dark:bg-violet-500/10 xl:col-span-1">
+          <div className="rounded-2xl bg-white p-3 shadow-sm"><Compass className="text-violet-500" size={20} /></div>
+          <div>
+            <p className="text-xs font-bold uppercase text-violet-700">Online Events</p>
+            <p className="text-2xl font-black text-violet-900">{stats.online}</p>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* 4. The Interactive Map */}
-      <div className="relative rounded-2xl overflow-hidden border-2 border-slate-200 shadow-inner">
+      <div className="rounded-[28px] border border-white/70 bg-white/75 p-5 shadow-sm dark:border-white/10 dark:bg-slate-900/70">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="mr-2 text-sm font-bold text-slate-700 dark:text-slate-200">Filter Status:</span>
+            {STATUS_OPTIONS.map((status) => (
+              <button
+                key={status}
+                onClick={() => setSelectedStatus(status)}
+                className={`rounded-full px-5 py-2.5 text-sm font-semibold capitalize transition-all duration-300 ${
+                  selectedStatus === status
+                    ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/25"
+                    : "border border-slate-200 bg-white text-slate-600 hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-violet-500/30 dark:hover:text-violet-300"
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+
+          {stats.online > 0 && (
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet-100 bg-violet-50 px-4 py-2 text-xs font-bold text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300">
+              <Globe size={16} />
+              {stats.online} Online Events (Not on map)
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="relative overflow-hidden rounded-[30px] border border-white/70 bg-white/80 p-3 shadow-[0_24px_70px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-900/70 dark:shadow-[0_24px_70px_rgba(2,6,23,0.45)]">
         {locationGroups.length > 0 ? (
-          <div
-            ref={mapRef}
-            className="h-[550px] w-full z-0"
-            style={{ background: "#e5e7eb" }}
-          />
+          <div className="overflow-hidden rounded-[24px] border border-slate-200 shadow-inner dark:border-white/10">
+            <div
+              ref={mapRef}
+              className="z-0 h-[550px] w-full"
+              style={{ background: "#e5e7eb" }}
+            />
+          </div>
         ) : (
-          <div className="h-[550px] w-full bg-slate-50 flex flex-col items-center justify-center">
-            <MapPin className="h-12 w-12 text-slate-300 mb-3" />
-            <p className="text-slate-600 font-bold text-lg">No locations found</p>
-            <p className="text-slate-400 text-sm mt-1">Try searching for a different city or changing the status filter.</p>
+          <div className="flex h-[550px] w-full flex-col items-center justify-center rounded-[24px] bg-slate-50 dark:bg-slate-800/70">
+            <MapPin className="mb-3 h-12 w-12 text-slate-300 dark:text-slate-600" />
+            <p className="text-lg font-bold text-slate-600 dark:text-slate-200">No locations found</p>
+            <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">Try searching for a different city or changing the status filter.</p>
           </div>
         )}
       </div>
