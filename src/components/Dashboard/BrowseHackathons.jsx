@@ -8,21 +8,16 @@ import {
   Search,
   Sparkles,
   Trophy,
-  Globe,
-  Info
+  Globe
 } from "lucide-react";
 import { apiClient } from "../../api/client";
 import { useRealtimeStream } from "../../hooks/useRealtimeStream";
 
-/** * CLEANER: Sanitizes date strings for Reliable Parsing
- * Strips common scraper prefixes like "Posted", "Ends in", etc.
- */
 const cleanDate = (dateStr) => {
   if (!dateStr || dateStr === "N/A") return null;
   return dateStr.replace(/(Posted|Ends|Starts|in|on|at)/gi, "").trim();
 };
 
-/** Map GET /hackathons/live items to the card model used in this component */
 function normalizeExternalUrl(rawUrl, platform) {
   const url = String(rawUrl || "").trim();
   if (!url) return null;
@@ -140,8 +135,12 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // STATS & FILTERS
   const [filterStatus, setFilterStatus] = useState("all");
-  const [dataSource, setDataSource] = useState(""); // 'platform' | 'platform+live' | 'live'
+  const [filterMode, setFilterMode] = useState("all"); // Online/Offline filter
+  
+  const [dataSource, setDataSource] = useState(""); 
   const [reloadKey, setReloadKey] = useState(0);
   const [registeringId, setRegisteringId] = useState("");
 
@@ -214,9 +213,16 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
       const searchTarget = `${h.title} ${h.description} ${h.organizerName} ${h.location} ${h.sourcePlatform}`.toLowerCase();
       const matchesSearch = !searchTerm || searchTarget.includes(searchTerm.toLowerCase().trim());
       const matchesStatus = filterStatus === "all" || h.calculatedStatus === filterStatus;
-      return matchesSearch && matchesStatus;
+      
+      const normalizedMode = String(h.mode || "").toLowerCase();
+      let matchesMode = true;
+      if (filterMode === "online") matchesMode = normalizedMode.includes("online");
+      else if (filterMode === "in-person") matchesMode = normalizedMode.includes("in-person") || normalizedMode.includes("offline");
+      else if (filterMode === "hybrid") matchesMode = normalizedMode.includes("hybrid");
+
+      return matchesSearch && matchesStatus && matchesMode;
     });
-  }, [filterStatus, hackathons, searchTerm]);
+  }, [filterStatus, filterMode, hackathons, searchTerm]);
 
   const handleRegister = async (hackathon) => {
     const externalUrl = hackathon.registrationUrl || hackathon.url;
@@ -292,12 +298,12 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-[24px] border border-blue-200 bg-blue-50/90 px-4 py-4 shadow-sm dark:border-blue-500/20 dark:bg-blue-500/10">
               <div className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">Total Events</div>
-              <div className="mt-2 text-3xl font-bold text-slate-950 dark:text-slate-50">{hackathons.length}</div>
+              <div className="mt-2 text-3xl font-bold text-slate-950 dark:text-slate-50">{filteredHackathons.length}</div>
             </div>
             <div className="rounded-[24px] border border-emerald-200 bg-emerald-50/90 px-4 py-4 shadow-sm dark:border-emerald-500/20 dark:bg-emerald-500/10">
               <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Active Events</div>
               <div className="mt-2 text-3xl font-bold text-slate-950 dark:text-slate-50">
-                {hackathons.filter((item) => item.calculatedStatus === "ongoing").length}
+                {filteredHackathons.filter((item) => item.calculatedStatus === "ongoing").length}
               </div>
             </div>
           </div>
@@ -329,10 +335,12 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
             />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-500 dark:border-white/10 dark:bg-slate-800 dark:text-slate-400">
               <Filter size={16} />
             </div>
+            
+            {/* Status Dropdown */}
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -343,9 +351,22 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
               <option value="ongoing">Ongoing</option>
               <option value="ended">Ended</option>
             </select>
+            
+            {/* NEW: Mode Dropdown */}
+            <select
+              value={filterMode}
+              onChange={(e) => setFilterMode(e.target.value)}
+              className="cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-500/10 dark:border-white/10 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <option value="all">All Modes</option>
+              <option value="online">Online</option>
+              <option value="in-person">Offline / In-Person</option>
+              <option value="hybrid">Hybrid</option>
+            </select>
           </div>
         </div>
       </section>
+      
       {filteredHackathons.length > 0 ? (
         <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
           {filteredHackathons.map((hackathon, index) => {

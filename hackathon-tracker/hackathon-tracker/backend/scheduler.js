@@ -1,20 +1,45 @@
-const fs = require("fs");
 const path = require("path");
+const mongoose = require("mongoose");
 const scrapeDevpost = require("./scrapers/devpost");
 const scrapeUnstop = require("./scrapers/unstop");
 const scrapeDoraHacks = require("./scrapers/dorahacks");
 
-const DATA_FILE = path.join(__dirname, "data/hackathons.json");
+// Update this with your actual MongoDB URI
+const MONGO_URI = process.env.MONGO_URI || "YOUR_MONGODB_URI_HERE";
+
+const hackathonSchema = new mongoose.Schema({}, { strict: false });
+const Hackathon = mongoose.models.Hackathon || mongoose.model("Hackathon", hackathonSchema, "hackathons");
 
 async function refreshData() {
   console.log("Refreshing data...");
-  if (!fs.existsSync(path.join(__dirname, "data"))) fs.mkdirSync(path.join(__dirname, "data"));
   
-  const [devpost, unstop, dorahacks] = await Promise.all([scrapeDevpost(), scrapeUnstop(), scrapeDoraHacks()]);
+  // Ensure connection exists if this file is run directly from the terminal
+  if (mongoose.connection.readyState === 0) {
+    await mongoose.connect(MONGO_URI);
+  }
+  
+  const [devpost, unstop, dorahacks] = await Promise.all([
+    scrapeDevpost(), 
+    scrapeUnstop(), 
+    scrapeDoraHacks()
+  ]);
+  
   const all = [...devpost, ...unstop, ...dorahacks];
   
-  fs.writeFileSync(DATA_FILE, JSON.stringify({ updatedAt: new Date().toISOString(), total: all.length, hackathons: all }, null, 2));
-  console.log(`Done! ${all.length} hackathons saved (Devpost: ${devpost.length}, Unstop: ${unstop.length}, DoraHacks: ${dorahacks.length})`);
+  try {
+    // Clear the old scraped data and insert the new fresh data
+    await Hackathon.deleteMany({});
+    await Hackathon.insertMany(all);
+    
+    console.log(`Done! ${all.length} hackathons saved to MongoDB (Devpost: ${devpost.length}, Unstop: ${unstop.length}, DoraHacks: ${dorahacks.length})`);
+  } catch (error) {
+    console.error("Error saving data to MongoDB:", error);
+  } finally {
+    // If executed directly (node scheduler.js), disconnect so the terminal process can exit
+    if (require.main === module) {
+      await mongoose.disconnect();
+    }
+  }
 }
 
 module.exports = refreshData;

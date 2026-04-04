@@ -3,7 +3,7 @@ import { Calendar, CheckCircle, Clock, Compass, Globe, MapPin, Radar, Search, X 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// IMPORT API CLIENT INSTEAD OF STATIC JSON
+// IMPORT API CLIENT
 import { apiClient } from "../api/client"; 
 
 const STATUS_OPTIONS = ["all", "ongoing", "upcoming", "ended"];
@@ -64,6 +64,7 @@ const inferLocationFromUrl = (url) => {
   const candidate = parsed.find((segment) => segment.length > 3 && !/\d/.test(segment));
   return candidate ? candidate.replace(/\d+/g, "").replace(/[^a-z]/g, "") : "";
 };
+
 const HackathonTrackingMap = () => {
   const [hackathons, setHackathons] = useState([]);
   const [filteredHackathons, setFilteredHackathons] = useState([]);
@@ -76,51 +77,35 @@ const HackathonTrackingMap = () => {
   const markersRef = useRef([]);
 
   const getHackathonStatus = useCallback((hackathon) => {
-    if (hackathon?.calculatedStatus) {
-      const normalized = String(hackathon.calculatedStatus).toLowerCase();
-      if (["ongoing", "upcoming", "ended"].includes(normalized)) return normalized;
-    }
-
-    const rawStatus = String(hackathon?.status || hackathon?.open_state || hackathon?.openState || "").toLowerCase();
-    if (rawStatus === "open" || rawStatus === "active" || rawStatus === "ongoing") return "ongoing";
-    if (rawStatus === "ended" || rawStatus === "closed" || rawStatus === "past") return "ended";
-    if (rawStatus === "upcoming" || rawStatus === "scheduled" || rawStatus === "planned") return "upcoming";
-
+    // 1. DATES ARE THE MOST ACCURATE SOURCE OF TRUTH
+    const now = Date.now();
+    
     const parseDateString = (value) => {
       if (!value) return NaN;
       const normalized = String(value).replace(/Posted\s*/i, "").trim();
-      const parts = normalized.split("-").map((part) => part.trim()).filter(Boolean);
-      const extractYear = (text) => {
-        const match = String(text).match(/(19|20)\d{2}/);
-        return match ? match[0] : null;
-      };
-      const appendYear = (text, year) => {
-        const trimmed = String(text).replace(/,$/, "").trim();
-        return year && !/\d{4}$/.test(trimmed) ? `${trimmed}, ${year}` : trimmed;
-      };
-
-      if (parts.length === 2) {
-        const leftYear = extractYear(parts[0]);
-        const rightYear = extractYear(parts[1]);
-        const left = appendYear(parts[0], rightYear || leftYear || new Date().getFullYear());
-        const right = appendYear(parts[1], rightYear || leftYear || new Date().getFullYear());
-        return Date.parse(right) || Date.parse(left) || NaN;
-      }
-
       return Date.parse(normalized);
     };
 
-    const now = Date.now();
-    const start = parseDateString(hackathon.startDate || hackathon.deadline || "");
-    const end = parseDateString(hackathon.endDate || hackathon.deadline || "");
+    const start = parseDateString(hackathon.startDate || hackathon.deadline);
+    const end = parseDateString(hackathon.endDate || hackathon.deadline);
 
-    if (!Number.isNaN(end) && end < now) return "ended";
-    if (!Number.isNaN(start) && start > now) return "upcoming";
-    if (!Number.isNaN(start) && !Number.isNaN(end) && start <= now && end >= now) return "ongoing";
     if (!Number.isNaN(start) && !Number.isNaN(end)) {
-      return start > now ? "upcoming" : end < now ? "ended" : "ongoing";
+      if (now < start) return "upcoming";
+      if (now > end) return "ended";
+      return "ongoing";
+    } else if (!Number.isNaN(end)) {
+      if (now > end) return "ended";
+      return "ongoing";
+    } else if (!Number.isNaN(start)) {
+      if (now < start) return "upcoming";
+      return "ongoing";
     }
 
+    // 2. FALLBACK TO SCRAPER TEXT IF NO DATES EXIST
+    const rawStatus = String(hackathon?.status || hackathon?.calculatedStatus || hackathon?.open_state || "").toLowerCase();
+    if (rawStatus.includes("upcoming") || rawStatus.includes("scheduled")) return "upcoming";
+    if (rawStatus.includes("ended") || rawStatus.includes("closed") || rawStatus.includes("past")) return "ended";
+    
     return "ongoing";
   }, []);
 
@@ -173,7 +158,6 @@ const HackathonTrackingMap = () => {
     return updatedItems;
   };
 
-  // Load live and platform hackathons together, and infer coordinates wherever possible.
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -279,14 +263,13 @@ const HackathonTrackingMap = () => {
     markersRef.current = [];
     if (!mapRef.current) return undefined;
 
+    // MAP ALWAYS INITIALIZES EVEN IF 0 LOCATIONS
     mapInstance.current = L.map(mapRef.current).setView([22.5937, 78.9629], 5);
     
     L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
       attribution: "&copy; OpenStreetMap contributors",
       maxZoom: 19
     }).addTo(mapInstance.current);
-
-    if (!locationGroups.length) return undefined;
 
     const bounds = [];
     
@@ -476,21 +459,24 @@ const HackathonTrackingMap = () => {
       </div>
 
       <div className="relative overflow-hidden rounded-[30px] border border-white/70 bg-white/80 p-3 shadow-[0_24px_70px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-900/70 dark:shadow-[0_24px_70px_rgba(2,6,23,0.45)]">
-        {locationGroups.length > 0 ? (
-          <div className="overflow-hidden rounded-[24px] border border-slate-200 shadow-inner dark:border-white/10">
-            <div
-              ref={mapRef}
-              className="z-0 h-[550px] w-full"
-              style={{ background: "#e5e7eb" }}
-            />
-          </div>
-        ) : (
-          <div className="flex h-[550px] w-full flex-col items-center justify-center rounded-[24px] bg-slate-50 dark:bg-slate-800/70">
-            <MapPin className="mb-3 h-12 w-12 text-slate-300 dark:text-slate-600" />
-            <p className="text-lg font-bold text-slate-600 dark:text-slate-200">No locations found</p>
-            <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">Try searching for a different city or changing the status filter.</p>
-          </div>
-        )}
+        <div className="relative overflow-hidden rounded-[24px] border border-slate-200 shadow-inner dark:border-white/10">
+          <div
+            ref={mapRef}
+            className="z-0 h-[550px] w-full"
+            style={{ background: "#e5e7eb" }}
+          />
+          {locationGroups.length === 0 && (
+            <div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2 flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/95 px-8 py-4 text-center shadow-2xl backdrop-blur-md dark:border-white/10 dark:bg-slate-900/95 pointer-events-none">
+              <MapPin className="mb-2 h-8 w-8 text-violet-500" />
+              <p className="text-base font-bold text-slate-800 dark:text-slate-100">
+                No physical pins for '{selectedStatus}' events
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Showing {stats.online} online events in the counter above instead.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
