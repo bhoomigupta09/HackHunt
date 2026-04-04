@@ -89,3 +89,27 @@ async function startServer() {
 }
 
 startServer();
+// Paste this at the bottom of your server.js or index.js file
+const cron = require('node-cron');
+const { exec } = require('child_process');
+const path = require('path');
+
+// This runs every day at 00:00 (Midnight)
+cron.schedule('0 0 * * *', () => {
+  console.log("Running automatic daily hackathon scrape...");
+  
+  // Point this to your scheduler file
+  const schedulerPath = path.join(__dirname, '../hackathon-tracker/hackathon-tracker/backend/scheduler.js');
+  
+  exec(`node ${schedulerPath}`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error running scraper: ${error.message}`);
+      return;
+    }
+    if (stderr) {
+      console.error(`Scraper stderr: ${stderr}`);
+      return;
+    }
+    console.log(`Scraper output: ${stdout}`);
+  });
+});

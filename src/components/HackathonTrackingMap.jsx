@@ -3,15 +3,13 @@ import { MapPin, Search, X, Globe, Calendar, Clock, CheckCircle } from "lucide-r
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// IMPORT YOUR LOCAL JSON DATA HERE
-import mockHackathons from "../data/unstop_scraped_data.json";
+// IMPORT API CLIENT INSTEAD OF STATIC JSON
+import { apiClient } from "../api/client"; 
 
-// We will use "ongoing" in UI to match your preference
 const STATUS_OPTIONS = ["all", "ongoing", "upcoming", "ended"];
 
 const normalizeLocation = (value = "") => value.trim().toLowerCase();
 
-// PRE-CACHED COORDINATES FOR INSTANT LOADING
 const KNOWN_CITIES = {
   "delhi": { lat: 28.6139, lng: 77.2090 },
   "new delhi": { lat: 28.6139, lng: 77.2090 },
@@ -32,14 +30,12 @@ const KNOWN_CITIES = {
   "nashik": { lat: 19.9975, lng: 73.7898 },
   "kolkata": { lat: 22.5726, lng: 88.3639 },
   "jaipur": { lat: 26.9124, lng: 75.7873 },
-  "rajasthan": { lat: 26.9124, lng: 75.7873 } // added default for rajasthan state searches
+  "rajasthan": { lat: 26.9124, lng: 75.7873 }
 };
 
 const hasValidCoordinates = (hackathon) =>
   Number.isFinite(Number(hackathon?.latitude)) &&
   Number.isFinite(Number(hackathon?.longitude));
-
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const HackathonTrackingMap = () => {
   const [hackathons, setHackathons] = useState([]);
@@ -52,12 +48,12 @@ const HackathonTrackingMap = () => {
   const mapInstance = useRef(null);
   const markersRef = useRef([]);
 
-  // Determine Status
   const getHackathonStatus = useCallback((hackathon) => {
     try {
       const cleanStartDateStr = (hackathon.startDate || "").replace("Posted ", "").trim();
       const start = new Date(cleanStartDateStr);
-      const now = new Date("2024-10-15");
+      const end = hackathon.endDate ? new Date(hackathon.endDate) : new Date(start.getTime() + (3 * 24 * 60 * 60 * 1000));
+      const now = new Date();
 
       if (!isNaN(end.getTime()) && end < now) return "ended";
       if (!isNaN(start.getTime()) && start > now) return "upcoming";
@@ -69,7 +65,6 @@ const HackathonTrackingMap = () => {
     return "ended";
   }, []);
 
-  // AUTO-GEOCODER
   const autoGeocodeLocations = async (items) => {
     const updatedItems = [];
     
@@ -85,11 +80,10 @@ const HackathonTrackingMap = () => {
         continue;
       }
 
-      // Check predefined fast dictionary first
       let matched = false;
       for (const [city, coords] of Object.entries(KNOWN_CITIES)) {
         if (locStr.includes(city)) {
-          const latOffset = (Math.random() - 0.5) * 0.03; // Spread out pins in same city
+          const latOffset = (Math.random() - 0.5) * 0.03;
           const lngOffset = (Math.random() - 0.5) * 0.03;
           updatedItems.push({
             ...item,
@@ -102,7 +96,6 @@ const HackathonTrackingMap = () => {
       }
 
       if (!matched) {
-        // Fallback to cache/api if not in dictionary
         const cacheKey = `hackhunt_geo_${normalizeLocation(item.location)}`;
         const cachedCoordsStr = localStorage.getItem(cacheKey);
         
@@ -114,29 +107,38 @@ const HackathonTrackingMap = () => {
             updatedItems.push(item);
           }
         } else {
-          updatedItems.push(item); // Leave without coords if not cached to avoid blocking UI
+          updatedItems.push(item);
         }
       }
     }
     return updatedItems;
   };
 
+  // UPDATED: Now fetches live data instead of static JSON
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      const formattedMockData = mockHackathons.map((h) => ({
-        ...h,
-        _id: h.id,
-        mode: h.type,
-      }));
-      const enrichedHackathons = await autoGeocodeLocations(formattedMockData);
-      setHackathons(enrichedHackathons);
-      setLoading(false);
+      try {
+        const res = await apiClient.getLiveScrapedHackathons();
+        const liveData = res.hackathons || [];
+        
+        const formattedData = liveData.map((h) => ({
+          ...h,
+          _id: h.id,
+          mode: h.type || "online",
+        }));
+        
+        const enrichedHackathons = await autoGeocodeLocations(formattedData);
+        setHackathons(enrichedHackathons);
+      } catch (error) {
+        console.error("Failed to load live map data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     loadData();
   }, []);
 
-  // Instant Filter Engine
   useEffect(() => {
     const locationTerm = normalizeLocation(searchLocation);
     const filtered = hackathons.filter((hackathon) => {
@@ -151,7 +153,6 @@ const HackathonTrackingMap = () => {
     setFilteredHackathons(filtered);
   }, [hackathons, searchLocation, selectedStatus, getHackathonStatus]);
 
-  // Live Stats Calculator based on current filters
   const stats = useMemo(() => {
     return {
       total: filteredHackathons.length,
@@ -162,7 +163,6 @@ const HackathonTrackingMap = () => {
     };
   }, [filteredHackathons, getHackathonStatus]);
 
-  // Group by location for Map Pins
   const locationGroups = useMemo(() => {
     const groups = new Map();
     filteredHackathons
@@ -193,7 +193,6 @@ const HackathonTrackingMap = () => {
     return Array.from(groups.values());
   }, [filteredHackathons, getHackathonStatus]);
 
-  // Render Leaflet Map
   useEffect(() => {
     if (mapInstance.current) {
       mapInstance.current.remove();
@@ -214,7 +213,6 @@ const HackathonTrackingMap = () => {
     const bounds = [];
     
     locationGroups.forEach((group) => {
-      // Create a custom numbered PIN
       const pinColor = group.statusCounts.ongoing > 0 ? "bg-emerald-500" 
                      : group.statusCounts.upcoming > 0 ? "bg-blue-500" 
                      : "bg-slate-600";
@@ -293,7 +291,7 @@ const HackathonTrackingMap = () => {
       <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
         <div className="h-[500px] w-full rounded-2xl bg-slate-50 flex flex-col items-center justify-center">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-violet-500 border-t-transparent mb-4"></div>
-          <p className="text-slate-700 font-bold">Loading Map Data...</p>
+          <p className="text-slate-700 font-bold">Loading Live Map Data...</p>
         </div>
       </div>
     );
@@ -301,8 +299,6 @@ const HackathonTrackingMap = () => {
 
   return (
     <div className="space-y-6 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-      
-      {/* 1. Header & Live Search Bar */}
       <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
         <div>
           <h3 className="text-2xl font-bold text-slate-950">Hackathon Radar</h3>
@@ -317,7 +313,7 @@ const HackathonTrackingMap = () => {
             type="text"
             placeholder="Type city (e.g., Delhi, Pune)..."
             value={searchLocation}
-            onChange={(e) => setSearchLocation(e.target.value)} // INSTANT SEARCH
+            onChange={(e) => setSearchLocation(e.target.value)}
             className="w-full pl-12 pr-10 py-3.5 border border-slate-300 bg-slate-50 hover:bg-white rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all shadow-inner"
           />
           {searchLocation && (
@@ -331,7 +327,6 @@ const HackathonTrackingMap = () => {
         </div>
       </div>
 
-      {/* 2. Live Stats Dashboard */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center gap-4">
           <div className="p-3 bg-white rounded-xl shadow-sm"><MapPin className="text-violet-600" size={20}/></div>
@@ -363,7 +358,6 @@ const HackathonTrackingMap = () => {
         </div>
       </div>
 
-      {/* 3. Status Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-sm font-bold text-slate-700 mr-2">Filter Status:</span>
         {STATUS_OPTIONS.map((status) => (
@@ -388,7 +382,6 @@ const HackathonTrackingMap = () => {
         )}
       </div>
 
-      {/* 4. The Interactive Map */}
       <div className="relative rounded-2xl overflow-hidden border-2 border-slate-200 shadow-inner">
         {locationGroups.length > 0 ? (
           <div

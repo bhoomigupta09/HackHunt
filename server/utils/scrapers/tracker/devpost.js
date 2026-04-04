@@ -54,8 +54,11 @@ async function scrapeDevpost(pages = 3) {
   const allItems = [];
   try {
     for (let page = 1; page <= pages; page++) {
-      const url = `https://devpost.com/api/hackathons?status[]=open&order_by=deadline&page=${page}`;
+      // Replace the old url variable with this updated one:
+      const url = `https://devpost.com/api/hackathons?status[]=open&status[]=upcoming&order_by=deadline&page=${page}`;
+      //const url = `https://devpost.com/api/hackathons?status[]=open&order_by=deadline&page=${page}`;
       let data;
+
       let lastErr;
       for (let attempt = 0; attempt < 3; attempt++) {
         try {

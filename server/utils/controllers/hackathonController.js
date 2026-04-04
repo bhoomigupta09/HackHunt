@@ -8,18 +8,51 @@ const {
 } = require("../../services/hackathonService");
 const { broadcast, createActivity } = require("../../utils/realtimeHub");
 const mongoose = require("mongoose");
-const { getLiveScrapedHackathons } = require("../scrapers/liveHackathonScraper");
+const fs = require("fs");
+const path = require("path");
 
 const getLiveHackathons = async (req, res) => {
   try {
-    const forceRefresh =
-      req.query.refresh === "1" ||
-      req.query.refresh === "true" ||
-      req.query.nocache === "1";
-    const body = await getLiveScrapedHackathons({ forceRefresh });
-    res.json(body);
+    console.log("🚀 API HIT: /hackathons/live");
+    
+    // path.resolve use kiya hai exact absolute path dekhne ke liye
+    const dataPath = path.resolve(__dirname, "../../../hackathon-tracker/hackathon-tracker/backend/data/hackathons.json");
+    console.log("📂 Checking for file exactly at:", dataPath);
+    
+    if (fs.existsSync(dataPath)) {
+      console.log("✅ File FOUND!");
+      const fileData = fs.readFileSync(dataPath, "utf8");
+      const parsedData = JSON.parse(fileData);
+      console.log(`📊 Found ${parsedData.hackathons?.length} hackathons in file.`);
+      
+      const formattedHackathons = (parsedData.hackathons || []).map((h, index) => {
+        const stDate = h.deadline && h.deadline !== "N/A" ? h.deadline : new Date().toISOString();
+        const enDate = h.deadline && h.deadline !== "N/A" ? h.deadline : new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+
+        return {
+          ...h,
+          id: h.id || `live-${h.source}-${index}`,
+          _id: h.id || `live-${h.source}-${index}`,
+          platform: h.source,
+          image: h.thumbnail,
+          type: "online",
+          location: h.location || "Online",
+          startDate: stDate,
+          endDate: enDate
+        };
+      });
+      
+      return res.json({
+        success: true,
+        total: formattedHackathons.length,
+        hackathons: formattedHackathons
+      });
+    } else {
+      console.log("❌ FILE NOT FOUND!");
+      return res.json({ success: true, total: 0, hackathons: [] });
+    }
   } catch (error) {
-    console.error("Error in getLiveHackathons:", error.message);
+    console.error("❌ Error in getLiveHackathons:", error.message);
     res.status(500).json({
       message: "Failed to fetch live hackathons",
       error: error.message

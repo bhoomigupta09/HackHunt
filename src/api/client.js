@@ -1,8 +1,9 @@
 // Client-side API functions for the frontend
 import { normalizeValidationMessage } from '../utils/validation';
 
+// New code:
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '/api/v1';
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:5000/api/v1';
 
 class APIClient {
   async request(endpoint, options = {}) {

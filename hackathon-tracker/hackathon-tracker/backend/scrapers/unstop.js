@@ -3,8 +3,10 @@ const puppeteer = require("puppeteer");
 async function scrapeUnstop() {
   console.log("Scraping Unstop (network interception)...");
 
+  // YAHAN CHANGE KIYA HAI: Local Chrome ka path de diya hai
   const browser = await puppeteer.launch({
     headless: true,
+    executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
   });
 
   const page = await browser.newPage();
