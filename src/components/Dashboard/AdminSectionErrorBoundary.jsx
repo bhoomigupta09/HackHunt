@@ -24,8 +24,8 @@ class AdminSectionErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="rounded-[28px] border border-red-200 bg-red-50 px-6 py-8 text-red-700 shadow-sm">
-          <h3 className="text-lg font-semibold text-red-800">Admin section could not be displayed</h3>
+        <div className="rounded-[28px] border border-red-200 bg-red-50 px-6 py-8 text-red-700 shadow-sm dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+          <h3 className="text-lg font-semibold text-red-800 dark:text-red-200">Admin section could not be displayed</h3>
           <p className="mt-2 text-sm leading-6">{this.state.errorMessage}</p>
           <button
             type="button"

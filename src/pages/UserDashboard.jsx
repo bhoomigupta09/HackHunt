@@ -1,143 +1,15 @@
-// import React, { useState, useEffect } from "react";
-// import { useNavigate } from "react-router-dom";
-// import { Menu, X, LogOut } from "lucide-react";
-// import MyProfile from "../components/Dashboard/MyProfile";
-// import BrowseHackathons from "../components/Dashboard/BrowseHackathons";
-// import RegisteredHackathons from "../components/Dashboard/RegisteredHackathons";
-
-// const UserDashboard = () => {
-//   const [activeSection, setActiveSection] = useState("profile");
-//   const [sidebarOpen, setSidebarOpen] = useState(true);
-//   const [user, setUser] = useState(null);
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     // Check if user is logged in
-//     const userId = localStorage.getItem("userId");
-//     const userRole = localStorage.getItem("userRole");
-//     const userName = localStorage.getItem("userName");
-
-//     if (!userId || userRole !== "user") {
-//       navigate("/login?role=user");
-//       return;
-//     }
-
-//     setUser({
-//       id: userId,
-//       name: userName,
-//       role: userRole
-//     });
-//   }, [navigate]);
-
-//   const handleLogout = () => {
-//     localStorage.removeItem("isLoggedIn");
-//     localStorage.removeItem("userId");
-//     localStorage.removeItem("userRole");
-//     localStorage.removeItem("userName");
-//     navigate("/");
-//   };
-
-//   const menuItems = [
-//     { id: "profile", label: "My Profile", icon: "ðŸ‘¤" },
-//     { id: "browse", label: "Browse Hackathons", icon: "ðŸ”" },
-//     { id: "registered", label: "My Registrations", icon: "âœ…" }
-//   ];
-
-//   return (
-//     <div className="flex h-screen bg-gray-100">
-//       {/* Sidebar */}
-//       <div
-//         className={`${
-//           sidebarOpen ? "w-64" : "w-20"
-//         } bg-gradient-to-b from-purple-600 to-purple-800 text-white transition-all duration-300 shadow-lg`}
-//       >
-//         {/* Header */}
-//         <div className="p-4 flex items-center justify-between">
-//           <h1 className={`${!sidebarOpen && "hidden"} font-bold text-xl`}>
-//             HackHunt
-//           </h1>
-//           <button
-//             onClick={() => setSidebarOpen(!sidebarOpen)}
-//             className="p-1 hover:bg-purple-500 rounded-lg transition"
-//           >
-//             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-//           </button>
-//         </div>
-
-//         {/* User Info */}
-//         <div className="px-4 py-6 border-b border-purple-500">
-//           <div className={`flex items-center ${!sidebarOpen && "justify-center"}`}>
-//             <div className="w-10 h-10 bg-purple-300 rounded-full flex items-center justify-center font-bold text-purple-900">
-//               {user?.name?.charAt(0)?.toUpperCase()}
-//             </div>
-//             {sidebarOpen && (
-//               <div className="ml-3">
-//                 <p className="font-semibold text-sm">{user?.name}</p>
-//                 <p className="text-xs text-purple-200">User</p>
-//               </div>
-//             )}
-//           </div>
-//         </div>
-
-//         {/* Menu Items */}
-//         <nav className="mt-6 flex flex-col space-y-2 px-2">
-//           {menuItems.map((item) => (
-//             <button
-//               key={item.id}
-//               onClick={() => setActiveSection(item.id)}
-//               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition duration-200 ${
-//                 activeSection === item.id
-//                   ? "bg-white text-purple-600 font-semibold"
-//                   : "text-white hover:bg-purple-500"
-//               }`}
-//             >
-//               <span className="text-xl">{item.icon}</span>
-//               {sidebarOpen && <span>{item.label}</span>}
-//             </button>
-//           ))}
-//         </nav>
-
-//         {/* Logout Button */}
-//         <div className="absolute bottom-4 left-0 right-0 px-2">
-//           <button
-//             onClick={handleLogout}
-//             className={`w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-200`}
-//           >
-//             <LogOut size={18} />
-//             {sidebarOpen && <span>Logout</span>}
-//           </button>
-//         </div>
-//       </div>
-
-//       {/* Main Content */}
-//       <div className="flex-1 overflow-auto">
-//         <div className="p-8">
-//           {/* Header */}
-//           <div className="mb-8">
-//             <h2 className="text-3xl font-bold text-gray-800">
-//               {menuItems.find((item) => item.id === activeSection)?.label}
-//             </h2>
-//             <p className="text-gray-600 mt-1">Welcome back, {user?.name}!</p>
-//           </div>
-
-//           {/* Content */}
-//           <div className="bg-white rounded-xl shadow-lg p-8">
-//             {activeSection === "profile" && <MyProfile user={user} />}
-//             {activeSection === "browse" && <BrowseHackathons user={user} />}
-//             {activeSection === "registered" && <RegisteredHackathons user={user} />}
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default UserDashboard;
-
-
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, LogOut } from "lucide-react";
+import {
+  Compass,
+  LayoutGrid,
+  LogOut,
+  MapPinned,
+  Menu,
+  Moon,
+  Sun,
+  UserRound
+} from "lucide-react";
 import MyProfile from "../components/Dashboard/MyProfile";
 import BrowseHackathons from "../components/Dashboard/BrowseHackathons";
 import RegisteredHackathons from "../components/Dashboard/RegisteredHackathons";
@@ -156,12 +28,12 @@ const UserDashboard = () => {
 
   const [activeSection, setActiveSection] = useState(defaultSection);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [user, setUser] = useState({ name: "User", role: "user", id: "" }); // Default values set kar di
+  const [user, setUser] = useState({ name: "User", role: "user", id: "" });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem("hackhunt-user-theme") || "light");
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is logged in
     const userId = localStorage.getItem("userId");
     const userRole = localStorage.getItem("userRole");
     const userName = localStorage.getItem("userName");
@@ -171,10 +43,9 @@ const UserDashboard = () => {
       return;
     }
 
-    // "undefined" string check aur fallback
     setUser({
       id: userId,
-      name: (userName && userName !== "undefined") ? userName : "User",
+      name: userName && userName !== "undefined" ? userName : "User",
       role: userRole
     });
   }, [navigate]);
@@ -184,6 +55,13 @@ const UserDashboard = () => {
       setActiveSection(sectionFromQuery);
     }
   }, [sectionFromQuery]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("dark", theme === "dark");
+    document.body.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("hackhunt-user-theme", theme);
+  }, [theme]);
 
   const switchSection = (sectionId) => {
     setActiveSection(sectionId);
@@ -195,103 +73,201 @@ const UserDashboard = () => {
   };
 
   const confirmLogout = () => {
-    localStorage.clear(); // Saara kachra ek saath saaf
+    localStorage.clear();
     navigate("/");
   };
 
-  const menuItems = [
-    { id: "profile", label: "My Profile", icon: "" },
-    { id: "browse", label: "Browse Hackathons", icon: "" },
-    { id: "registered", label: "My Registrations", icon: "" },
-    { id: "track", label: "Track Hackathons", icon: "" }
-  ];
+  const menuItems = useMemo(
+    () => [
+      { id: "profile", label: "My Profile", icon: UserRound },
+      { id: "browse", label: "Browse Hackathons", icon: Compass },
+      { id: "registered", label: "My Registrations", icon: LayoutGrid },
+      { id: "track", label: "Track Hackathons", icon: MapPinned }
+    ],
+    []
+  );
+
+  const activeMenuItem = menuItems.find((item) => item.id === activeSection);
+  const isDark = theme === "dark";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.16),transparent_24%),linear-gradient(180deg,#f8fafc,#eef2ff_48%,#f8fafc)]">
-      {/* Sidebar */}
-      <div
-        className={`${
-          sidebarOpen ? "w-64" : "w-20"
-        } relative flex flex-col overflow-y-auto border-r border-white/20 bg-gradient-to-b from-violet-700 via-purple-600 to-indigo-700 text-white transition-all duration-300 shadow-2xl`}
-      >
-        {/* Header */}
-        <div className="p-4 flex items-center justify-between">
-          <h1 className={`${!sidebarOpen && "hidden"} font-bold text-xl`}>
-            HackHunt
-          </h1>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1 hover:bg-purple-500 rounded-lg transition"
-          >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        </div>
+    <div className="relative flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.22),transparent_25%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.16),transparent_22%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_52%,#f8fafc_100%)] text-slate-900 transition-colors duration-300 dark:bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.16),transparent_25%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.14),transparent_22%),linear-gradient(180deg,#020617_0%,#0f172a_50%,#111827_100%)] dark:text-slate-100">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-[-8rem] top-[-6rem] h-72 w-72 rounded-full bg-fuchsia-400/20 blur-3xl" />
+        <div className="absolute bottom-[-8rem] right-[-5rem] h-80 w-80 rounded-full bg-blue-400/20 blur-3xl" />
+      </div>
 
-        {/* User Info - Handled undefined with Optional Chaining (?.) */}
-        <div className="px-4 py-6 border-b border-purple-500">
-          <div className={`flex items-center ${!sidebarOpen && "justify-center"}`}>
-            <div className="w-10 h-10 bg-purple-300 rounded-full flex items-center justify-center font-bold text-purple-900">
-              {user?.name?.charAt(0)?.toUpperCase() || "U"}
+      {sidebarOpen && (
+        <button
+          aria-label="Close sidebar overlay"
+          className="fixed inset-0 z-30 bg-slate-950/30 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex h-screen w-[290px] max-w-[85vw] flex-col border-r border-white/20 bg-white/12 px-4 py-4 text-white shadow-[0_30px_80px_rgba(15,23,42,0.24)] backdrop-blur-2xl transition-transform duration-300 lg:relative lg:h-full lg:w-80 lg:max-w-none lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:w-24 lg:translate-x-0"
+        }`}
+      >
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(109,40,217,0.92),rgba(91,33,182,0.84),rgba(49,46,129,0.9))]" />
+        <div className="relative flex h-full flex-col">
+          <div className="flex items-center justify-between gap-3 px-2 pb-5">
+            <div className={`overflow-hidden transition-all duration-300 ${sidebarOpen ? "opacity-100" : "opacity-0 lg:w-0"}`}>
+              <p className="bg-gradient-to-r from-white via-violet-100 to-fuchsia-100 bg-clip-text text-lg font-black uppercase tracking-[0.42em] text-transparent drop-shadow-[0_4px_18px_rgba(255,255,255,0.26)]">
+                HackHunt
+              </p>
             </div>
-            {sidebarOpen && (
-              <div className="ml-3">
-                <p className="font-semibold text-sm">{user?.name || "User"}</p>
-                <p className="text-xs text-purple-200">User Account</p>
+            <button
+              onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
+              className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white shadow-lg shadow-violet-950/20 transition duration-300 hover:scale-[1.03] hover:bg-white/20 ${
+                !sidebarOpen ? "lg:mx-auto" : ""
+              }`}
+              aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
+            >
+              <span className="relative flex h-5 w-5 items-center justify-center">
+                <Sun
+                  size={18}
+                  className={`absolute transition-all duration-300 ${isDark ? "rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100"}`}
+                />
+                <Moon
+                  size={18}
+                  className={`absolute transition-all duration-300 ${isDark ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-0 opacity-0"}`}
+                />
+              </span>
+            </button>
+          </div>
+
+          <div
+            className={`rounded-[28px] border border-white/15 bg-white/10 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.2)] transition-all duration-300 ${
+              sidebarOpen ? "opacity-100" : "opacity-0 lg:px-0 lg:py-4"
+            }`}
+          >
+            <div className={`flex items-center gap-4 ${sidebarOpen ? "" : "lg:justify-center"}`}>
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-fuchsia-400 to-cyan-300 blur-sm opacity-90" />
+                <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-950/35 text-xl font-semibold text-white ring-2 ring-white/70">
+                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                </div>
               </div>
+              {sidebarOpen && (
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold text-white">{user?.name || "User"}</p>
+                  <p className="mt-1 truncate text-xs font-medium uppercase tracking-[0.24em] text-white/65">
+                    User Account
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <nav className="mt-6 flex-1 space-y-2 overflow-y-auto pr-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeSection === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    switchSection(item.id);
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }}
+                  className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-[22px] px-4 py-3.5 text-left transition-all duration-300 ${
+                    isActive
+                      ? "bg-white text-violet-700 shadow-[0_18px_35px_rgba(255,255,255,0.16)]"
+                      : "text-white/88 hover:bg-white/12 hover:text-white"
+                  } ${sidebarOpen ? "" : "lg:justify-center lg:px-0"}`}
+                >
+                  {isActive && (
+                    <div className="absolute inset-0 rounded-[22px] bg-[radial-gradient(circle_at_left,rgba(168,85,247,0.14),transparent_55%)]" />
+                  )}
+                  <span
+                    className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-all duration-300 ${
+                      isActive
+                        ? "bg-gradient-to-br from-violet-100 to-fuchsia-100 text-violet-700 shadow-lg shadow-violet-500/20"
+                        : "bg-white/10 text-white group-hover:bg-white/20"
+                    }`}
+                  >
+                    <Icon size={18} />
+                  </span>
+                  {sidebarOpen && (
+                    <span className="relative min-w-0 truncate text-sm font-semibold">{item.label}</span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="mt-4 rounded-[24px] border border-white/15 bg-white/10 p-3">
+            {sidebarOpen ? (
+              <div>
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-rose-500 via-fuchsia-500 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_35px_rgba(217,70,239,0.35)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_40px_rgba(217,70,239,0.42)]"
+                >
+                  <LogOut size={17} />
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-600 text-white shadow-lg shadow-fuchsia-900/30"
+              >
+                <LogOut size={17} />
+              </button>
             )}
           </div>
         </div>
+      </aside>
 
-        {/* Menu Items */}
-        <nav className="mt-6 flex flex-1 flex-col space-y-2 px-2">
-          {menuItems.map((item) => (
+      <main className="relative z-10 flex-1 overflow-y-auto">
+        <div className="mx-auto flex min-h-full max-w-[1600px] flex-col px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+          <div className="mb-5 flex items-center justify-between lg:hidden">
             <button
-              key={item.id}
-              onClick={() => switchSection(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition duration-200 ${
-                activeSection === item.id
-                  ? "bg-white text-purple-600 font-semibold"
-                  : "text-white hover:bg-purple-500"
-              }`}
+              onClick={() => setSidebarOpen(true)}
+              className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-white/60 bg-white/80 text-slate-700 shadow-lg shadow-slate-200/60 backdrop-blur transition-colors duration-300 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-100 dark:shadow-slate-950/40"
             >
-              <span className="text-xl">{item.icon}</span>
-              {sidebarOpen && <span>{item.label}</span>}
+              <Menu size={18} />
             </button>
-          ))}
-        </nav>
-
-        {/* Logout Button */}
-        <div className="mt-auto px-2 pb-4 pt-6">
-          <button
-            onClick={() => setShowLogoutConfirm(true)}
-            className={`w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-red-500 via-rose-500 to-fuchsia-600 hover:from-red-600 hover:to-fuchsia-700 text-white rounded-2xl shadow-lg shadow-red-500/30 transition duration-200`}
-          >
-            <LogOut size={18} />
-            {sidebarOpen && <span>Logout</span>}
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-7xl p-6 md:p-8">
-          {/* Header */}
-          <div className="mb-8 rounded-[30px] border border-white/70 bg-white/80 px-6 py-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-              {menuItems.find((item) => item.id === activeSection)?.label}
-            </h2>
-            <p className="mt-2 text-slate-600">Welcome back, {user?.name || "User"}! Explore approved hackathons and manage your profile here.</p>
+            <div className="rounded-2xl border border-white/60 bg-white/70 px-4 py-2 text-sm font-medium text-slate-600 shadow-lg shadow-slate-200/40 backdrop-blur transition-colors duration-300 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-200 dark:shadow-slate-950/40">
+              {activeMenuItem?.label}
+            </div>
+            <button
+              onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
+              className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-white/60 bg-white/80 text-slate-700 shadow-lg shadow-slate-200/60 backdrop-blur transition-colors duration-300 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-100 dark:shadow-slate-950/40 lg:hidden"
+              aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
+            >
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
           </div>
 
-          {/* Content */}
-          <div className="rounded-[32px] border border-white/70 bg-white/85 p-6 shadow-[0_24px_90px_rgba(15,23,42,0.08)] backdrop-blur md:p-8">
+          <section className="relative overflow-hidden rounded-[32px] border border-white/65 bg-white/72 px-6 py-6 shadow-[0_28px_90px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-colors duration-300 dark:border-white/10 dark:bg-slate-900/65 dark:shadow-[0_28px_90px_rgba(2,6,23,0.45)] sm:px-8 sm:py-8">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(167,139,250,0.22),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.88),rgba(244,244,255,0.72))] dark:bg-[radial-gradient(circle_at_top_right,rgba(167,139,250,0.18),transparent_24%),linear-gradient(135deg,rgba(30,41,59,0.9),rgba(15,23,42,0.72))]" />
+            <div className="relative">
+              <div className="max-w-3xl">
+                <h2 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950 transition-colors duration-300 dark:text-slate-50 sm:text-4xl">
+                  {activeMenuItem?.label}
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 transition-colors duration-300 dark:text-slate-300 sm:text-base">
+                  Welcome back, {user?.name || "User"}. Manage your profile, discover curated hackathons, review registrations,
+                  and track events through one polished workspace.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-6 flex-1 rounded-[34px] border border-white/65 bg-white/70 p-4 shadow-[0_28px_110px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-colors duration-300 dark:border-white/10 dark:bg-slate-900/60 dark:shadow-[0_28px_110px_rgba(2,6,23,0.5)] sm:p-6 lg:p-8">
             {activeSection === "profile" && <MyProfile user={user} />}
             {activeSection === "browse" && <BrowseHackathons user={user} initialSearchTerm={locationFromQuery} />}
             {activeSection === "registered" && <RegisteredHackathons user={user} />}
             {activeSection === "track" && <HackathonTrackingMap />}
-          </div>
+          </section>
         </div>
-      </div>
+      </main>
 
       <LogoutConfirmModal
         open={showLogoutConfirm}

@@ -119,6 +119,11 @@ const LoginAdmin = () => {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+        <div className="mt-4 text-center text-sm text-indigo-200">
+          <Link to="/" className="hover:text-white">
+            ← Back to Home
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -120,6 +120,12 @@ const LoginUser = () => {
           </button>
         </form>
 
+        <div className="mt-4 text-center text-sm text-blue-200">
+          <Link to="/" className="hover:text-white">
+            ← Back to Home
+          </Link>
+        </div>
+
         <div className="mt-8 text-center text-sm text-slate-400">
           Don&apos;t have an account?{" "}
           <Link to="/signup-user" className="text-blue-400 hover:text-blue-300 font-semibold">

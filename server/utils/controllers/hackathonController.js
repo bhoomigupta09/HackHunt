@@ -11,6 +11,65 @@ const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
 
+const parseHackathonDateRange = (value) => {
+  const fallbackStart = new Date().toISOString();
+  const fallbackEnd = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+
+  if (!value) {
+    return {
+      startDate: fallbackStart,
+      endDate: fallbackEnd
+    };
+  }
+
+  const normalized = String(value).trim();
+  const parts = normalized.split("-").map((part) => part.trim()).filter(Boolean);
+
+  const extractYear = (text) => {
+    const match = String(text).match(/(19|20)\d{2}/);
+    return match ? match[0] : null;
+  };
+
+  const appendYear = (text, year) => {
+    const trimmed = String(text).replace(/,$/, "").trim();
+    if (!year) return trimmed;
+    return /\d{4}$/.test(trimmed) ? trimmed : `${trimmed}, ${year}`;
+  };
+
+  let start = parts[0] || normalized;
+  let end = parts.length > 1 ? parts[1] : parts[0];
+
+  const startYear = extractYear(start);
+  const endYear = extractYear(end);
+
+  if (!startYear && endYear) {
+    start = appendYear(start, endYear);
+  }
+  if (!endYear && startYear) {
+    end = appendYear(end, startYear);
+  }
+
+  const parsedStart = Date.parse(start);
+  const parsedEnd = Date.parse(end);
+
+  return {
+    startDate: !Number.isNaN(parsedStart) ? new Date(parsedStart).toISOString() : fallbackStart,
+    endDate: !Number.isNaN(parsedEnd)
+      ? new Date(parsedEnd).toISOString()
+      : !Number.isNaN(parsedStart)
+      ? new Date(parsedStart + 3 * 24 * 60 * 60 * 1000).toISOString()
+      : fallbackEnd
+  };
+};
+
+const mapOpenStateToStatus = (openState) => {
+  const normalized = String(openState || "").toLowerCase();
+  if (normalized === "open" || normalized === "active") return "open";
+  if (normalized === "closed" || normalized === "ended" || normalized === "past") return "ended";
+  if (normalized === "upcoming" || normalized === "scheduled" || normalized === "planned") return "upcoming";
+  return "open";
+};
+
 const getLiveHackathons = async (req, res) => {
   try {
     console.log("🚀 API HIT: /hackathons/live");
@@ -26,8 +85,8 @@ const getLiveHackathons = async (req, res) => {
       console.log(`📊 Found ${parsedData.hackathons?.length} hackathons in file.`);
       
       const formattedHackathons = (parsedData.hackathons || []).map((h, index) => {
-        const stDate = h.deadline && h.deadline !== "N/A" ? h.deadline : new Date().toISOString();
-        const enDate = h.deadline && h.deadline !== "N/A" ? h.deadline : new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+        const { startDate, endDate } = parseHackathonDateRange(h.deadline);
+        const status = mapOpenStateToStatus(h.open_state || h.status || h.openState);
 
         return {
           ...h,
@@ -37,8 +96,9 @@ const getLiveHackathons = async (req, res) => {
           image: h.thumbnail,
           type: "online",
           location: h.location || "Online",
-          startDate: stDate,
-          endDate: enDate
+          status,
+          startDate,
+          endDate
         };
       });
       
@@ -527,7 +587,23 @@ const registerForHackathon = async (req, res) => {
 const unregisterFromHackathon = async (req, res) => {
   try {
     const { registrationId } = req.params;
-    const registration = await HackathonRegistration.findById(registrationId);
+    const { userId, hackathonId } = req.body || {};
+    let registration = null;
+
+    if (mongoose.Types.ObjectId.isValid(registrationId)) {
+      registration = await HackathonRegistration.findById(registrationId);
+    }
+
+    if (!registration && userId) {
+      const targetHackathonId = hackathonId || registrationId;
+
+      if (mongoose.Types.ObjectId.isValid(targetHackathonId)) {
+        registration = await HackathonRegistration.findOne({
+          userId,
+          hackathonId: targetHackathonId
+        });
+      }
+    }
 
     if (!registration) {
       return res.status(404).json({ message: "Registration not found." });
@@ -538,7 +614,7 @@ const unregisterFromHackathon = async (req, res) => {
       Hackathon.findById(registration.hackathonId)
     ]);
 
-    await HackathonRegistration.findByIdAndDelete(registrationId);
+    await HackathonRegistration.findByIdAndDelete(registration._id);
 
     if (user) {
       user.joinedHackathons = (user.joinedHackathons || []).filter(
@@ -550,7 +626,7 @@ const unregisterFromHackathon = async (req, res) => {
     broadcast("registration:deleted", {
       hackathonId: String(registration.hackathonId),
       userId: String(registration.userId),
-      registrationId
+      registrationId: String(registration._id)
     });
     if (user && hackathon) {
       createActivity({

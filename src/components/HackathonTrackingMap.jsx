@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MapPin, Search, X, Globe, Calendar, Clock, CheckCircle } from "lucide-react";
+import { Calendar, CheckCircle, Clock, Compass, Globe, MapPin, Radar, Search, X } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -16,27 +16,54 @@ const KNOWN_CITIES = {
   "mumbai": { lat: 19.0760, lng: 72.8777 },
   "dhanbad": { lat: 23.7957, lng: 86.4304 },
   "bangalore": { lat: 12.9716, lng: 77.5946 },
+  "bengaluru": { lat: 12.9716, lng: 77.5946 },
   "pune": { lat: 18.5204, lng: 73.8567 },
-  "yelahanka": { lat: 13.1007, lng: 77.5963 },
-  "greater noida": { lat: 28.4744, lng: 77.5040 },
+  "hyderabad": { lat: 17.3850, lng: 78.4867 },
   "chennai": { lat: 13.0827, lng: 80.2707 },
-  "pilani": { lat: 28.3802, lng: 75.6083 },
-  "ramanagara": { lat: 12.7150, lng: 77.2813 },
-  "navi mumbai": { lat: 19.0330, lng: 73.0297 },
-  "meerut": { lat: 28.9845, lng: 77.7064 },
-  "roorkee": { lat: 29.8543, lng: 77.8880 },
-  "jammu": { lat: 32.7266, lng: 74.8570 },
-  "dharuhera": { lat: 28.2055, lng: 76.7953 },
-  "nashik": { lat: 19.9975, lng: 73.7898 },
   "kolkata": { lat: 22.5726, lng: 88.3639 },
   "jaipur": { lat: 26.9124, lng: 75.7873 },
-  "rajasthan": { lat: 26.9124, lng: 75.7873 }
+  "ahmedabad": { lat: 23.0225, lng: 72.5714 },
+  "gurgaon": { lat: 28.4595, lng: 77.0266 },
+  "noida": { lat: 28.5355, lng: 77.3910 },
+  "greater noida": { lat: 28.4744, lng: 77.5040 },
+  "nashik": { lat: 19.9975, lng: 73.7898 },
+  "roorkee": { lat: 29.8543, lng: 77.8880 },
+  "meerut": { lat: 28.9845, lng: 77.7064 },
+  "jammu": { lat: 32.7266, lng: 74.8570 },
+  "dharuhera": { lat: 28.2055, lng: 76.7953 },
+  "pilani": { lat: 28.3802, lng: 75.6083 },
+  "rajasthan": { lat: 26.9124, lng: 75.7873 },
+  "san francisco": { lat: 37.7749, lng: -122.4194 },
+  "new york": { lat: 40.7128, lng: -74.0060 },
+  "los angeles": { lat: 34.0522, lng: -118.2437 },
+  "boston": { lat: 42.3601, lng: -71.0589 },
+  "seattle": { lat: 47.6062, lng: -122.3321 }
 };
 
 const hasValidCoordinates = (hackathon) =>
   Number.isFinite(Number(hackathon?.latitude)) &&
   Number.isFinite(Number(hackathon?.longitude));
 
+const inferLocationFromUrl = (url) => {
+  const value = String(url || "").toLowerCase();
+  if (!value) return "";
+
+  for (const city of Object.keys(KNOWN_CITIES)) {
+    if (value.includes(city)) {
+      return city;
+    }
+  }
+
+  const parsed = value
+    .replace(/https?:\/\//, "")
+    .replace(/www\./, "")
+    .split(/[\/\-_]+/)
+    .filter(Boolean)
+    .reverse();
+
+  const candidate = parsed.find((segment) => segment.length > 3 && !/\d/.test(segment));
+  return candidate ? candidate.replace(/\d+/g, "").replace(/[^a-z]/g, "") : "";
+};
 const HackathonTrackingMap = () => {
   const [hackathons, setHackathons] = useState([]);
   const [filteredHackathons, setFilteredHackathons] = useState([]);
@@ -49,20 +76,52 @@ const HackathonTrackingMap = () => {
   const markersRef = useRef([]);
 
   const getHackathonStatus = useCallback((hackathon) => {
-    try {
-      const cleanStartDateStr = (hackathon.startDate || "").replace("Posted ", "").trim();
-      const start = new Date(cleanStartDateStr);
-      const end = hackathon.endDate ? new Date(hackathon.endDate) : new Date(start.getTime() + (3 * 24 * 60 * 60 * 1000));
-      const now = new Date();
+    if (hackathon?.calculatedStatus) {
+      const normalized = String(hackathon.calculatedStatus).toLowerCase();
+      if (["ongoing", "upcoming", "ended"].includes(normalized)) return normalized;
+    }
 
-      if (!isNaN(end.getTime()) && end < now) return "ended";
-      if (!isNaN(start.getTime()) && start > now) return "upcoming";
-      if (!isNaN(start.getTime()) && start <= now && end >= now) return "ongoing";
-    } catch (e) {}
-    
-    const normalized = String(hackathon?.status || "").toLowerCase();
-    if (normalized === "open" || normalized === "active") return "ongoing";
-    return "ended";
+    const rawStatus = String(hackathon?.status || hackathon?.open_state || hackathon?.openState || "").toLowerCase();
+    if (rawStatus === "open" || rawStatus === "active" || rawStatus === "ongoing") return "ongoing";
+    if (rawStatus === "ended" || rawStatus === "closed" || rawStatus === "past") return "ended";
+    if (rawStatus === "upcoming" || rawStatus === "scheduled" || rawStatus === "planned") return "upcoming";
+
+    const parseDateString = (value) => {
+      if (!value) return NaN;
+      const normalized = String(value).replace(/Posted\s*/i, "").trim();
+      const parts = normalized.split("-").map((part) => part.trim()).filter(Boolean);
+      const extractYear = (text) => {
+        const match = String(text).match(/(19|20)\d{2}/);
+        return match ? match[0] : null;
+      };
+      const appendYear = (text, year) => {
+        const trimmed = String(text).replace(/,$/, "").trim();
+        return year && !/\d{4}$/.test(trimmed) ? `${trimmed}, ${year}` : trimmed;
+      };
+
+      if (parts.length === 2) {
+        const leftYear = extractYear(parts[0]);
+        const rightYear = extractYear(parts[1]);
+        const left = appendYear(parts[0], rightYear || leftYear || new Date().getFullYear());
+        const right = appendYear(parts[1], rightYear || leftYear || new Date().getFullYear());
+        return Date.parse(right) || Date.parse(left) || NaN;
+      }
+
+      return Date.parse(normalized);
+    };
+
+    const now = Date.now();
+    const start = parseDateString(hackathon.startDate || hackathon.deadline || "");
+    const end = parseDateString(hackathon.endDate || hackathon.deadline || "");
+
+    if (!Number.isNaN(end) && end < now) return "ended";
+    if (!Number.isNaN(start) && start > now) return "upcoming";
+    if (!Number.isNaN(start) && !Number.isNaN(end) && start <= now && end >= now) return "ongoing";
+    if (!Number.isNaN(start) && !Number.isNaN(end)) {
+      return start > now ? "upcoming" : end < now ? "ended" : "ongoing";
+    }
+
+    return "ongoing";
   }, []);
 
   const autoGeocodeLocations = async (items) => {
@@ -114,24 +173,43 @@ const HackathonTrackingMap = () => {
     return updatedItems;
   };
 
-  // UPDATED: Now fetches live data instead of static JSON
+  // Load live and platform hackathons together, and infer coordinates wherever possible.
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const res = await apiClient.getLiveScrapedHackathons();
-        const liveData = res.hackathons || [];
-        
-        const formattedData = liveData.map((h) => ({
+        const [liveRes, platformRes] = await Promise.all([
+          apiClient.getLiveScrapedHackathons(),
+          apiClient.getHackathons()
+        ]);
+
+        const liveData = (liveRes.hackathons || []).map((h) => ({
           ...h,
-          _id: h.id,
+          _id: h.id || h._id,
+          id: h.id || h._id,
           mode: h.type || "online",
+          location: h.location || inferLocationFromUrl(h.url) || "Online",
+          source: h.source || h.platform || "Live",
+          status: h.status || h.open_state || h.openState || "",
+          startDate: h.startDate || h.deadline || "",
+          endDate: h.endDate || h.deadline || ""
         }));
-        
-        const enrichedHackathons = await autoGeocodeLocations(formattedData);
+
+        const platformData = (platformRes.hackathons || []).map((h) => ({
+          ...h,
+          _id: h._id || h.id,
+          id: h._id || h.id,
+          location: h.location || inferLocationFromUrl(h.registrationUrl) || "Online",
+          status: h.calculatedStatus || h.status || "",
+          mode: h.mode || h.type || "online",
+          source: "HackHunt"
+        }));
+
+        const combined = [...platformData, ...liveData];
+        const enrichedHackathons = await autoGeocodeLocations(combined);
         setHackathons(enrichedHackathons);
       } catch (error) {
-        console.error("Failed to load live map data:", error);
+        console.error("Failed to load track map data:", error);
       } finally {
         setLoading(false);
       }
@@ -288,38 +366,42 @@ const HackathonTrackingMap = () => {
 
   if (loading) {
     return (
-      <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="h-[500px] w-full rounded-2xl bg-slate-50 flex flex-col items-center justify-center">
+      <div className="rounded-[32px] border border-white/70 bg-white/80 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-slate-900/70 dark:shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+        <div className="flex h-[500px] w-full flex-col items-center justify-center rounded-[28px] bg-slate-50 dark:bg-slate-800/70">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-violet-500 border-t-transparent mb-4"></div>
-          <p className="text-slate-700 font-bold">Loading Live Map Data...</p>
+          <p className="font-bold text-slate-700 dark:text-slate-200">Loading Map Data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
-        <div>
-          <h3 className="text-2xl font-bold text-slate-950">Hackathon Radar</h3>
-          <p className="text-sm text-slate-500 mt-1">
+    <div className="space-y-6 rounded-[34px] border border-white/70 bg-[radial-gradient(circle_at_top_right,rgba(167,139,250,0.18),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.92),rgba(248,250,252,0.82))] p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_right,rgba(167,139,250,0.16),transparent_24%),linear-gradient(135deg,rgba(30,41,59,0.96),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-2xl">
+          <div className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+            <Radar size={14} />
+            Live tracking
+          </div>
+          <h3 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-slate-950 dark:text-slate-50">Hackathon Radar</h3>
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-300 sm:text-base">
             Search locations and track events in real-time.
           </p>
         </div>
 
-        <div className="w-full lg:w-96 relative">
+        <div className="relative w-full lg:w-[28rem]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
           <input
             type="text"
             placeholder="Type city (e.g., Delhi, Pune)..."
             value={searchLocation}
             onChange={(e) => setSearchLocation(e.target.value)}
-            className="w-full pl-12 pr-10 py-3.5 border border-slate-300 bg-slate-50 hover:bg-white rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all shadow-inner"
+            className="w-full rounded-2xl border border-slate-200 bg-white/85 py-3.5 pl-12 pr-10 text-sm font-medium text-slate-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-all focus:border-violet-300 focus:ring-4 focus:ring-violet-500/10 dark:border-white/10 dark:bg-slate-800/80 dark:text-slate-100"
           />
           {searchLocation && (
             <button
               onClick={() => setSearchLocation("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-700"
             >
               <X size={18} />
             </button>
@@ -327,73 +409,86 @@ const HackathonTrackingMap = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center gap-4">
-          <div className="p-3 bg-white rounded-xl shadow-sm"><MapPin className="text-violet-600" size={20}/></div>
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+        <div className="flex items-center gap-4 rounded-[24px] border border-slate-200 bg-white/80 p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 dark:border-white/10 dark:bg-slate-800/80">
+          <div className="rounded-2xl bg-violet-50 p-3 shadow-sm"><MapPin className="text-violet-600" size={20} /></div>
           <div>
-            <p className="text-xs font-bold text-slate-500 uppercase">Total Events</p>
-            <p className="text-2xl font-black text-slate-900">{stats.total}</p>
+            <p className="text-xs font-bold uppercase text-slate-500 dark:text-slate-500">Total Events</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-slate-50">{stats.total}</p>
           </div>
         </div>
-        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-4">
-          <div className="p-3 bg-white rounded-xl shadow-sm"><CheckCircle className="text-emerald-500" size={20}/></div>
+        <div className="flex items-center gap-4 rounded-[24px] border border-emerald-100 bg-emerald-50 p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+          <div className="rounded-2xl bg-white p-3 shadow-sm"><CheckCircle className="text-emerald-500" size={20} /></div>
           <div>
             <p className="text-xs font-bold text-emerald-700 uppercase">Ongoing</p>
             <p className="text-2xl font-black text-emerald-900">{stats.ongoing}</p>
           </div>
         </div>
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center gap-4">
-          <div className="p-3 bg-white rounded-xl shadow-sm"><Calendar className="text-blue-500" size={20}/></div>
+        <div className="flex items-center gap-4 rounded-[24px] border border-blue-100 bg-blue-50 p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 dark:border-blue-500/20 dark:bg-blue-500/10">
+          <div className="rounded-2xl bg-white p-3 shadow-sm"><Calendar className="text-blue-500" size={20} /></div>
           <div>
             <p className="text-xs font-bold text-blue-700 uppercase">Upcoming</p>
             <p className="text-2xl font-black text-blue-900">{stats.upcoming}</p>
           </div>
         </div>
-        <div className="bg-slate-100 border border-slate-200 rounded-2xl p-4 flex items-center gap-4 opacity-70">
-          <div className="p-3 bg-white rounded-xl shadow-sm"><Clock className="text-slate-500" size={20}/></div>
+        <div className="flex items-center gap-4 rounded-[24px] border border-slate-200 bg-slate-100 p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 dark:border-white/10 dark:bg-slate-800/80">
+          <div className="rounded-2xl bg-white p-3 shadow-sm"><Clock className="text-slate-500" size={20} /></div>
           <div>
             <p className="text-xs font-bold text-slate-500 uppercase">Ended</p>
             <p className="text-2xl font-black text-slate-700">{stats.ended}</p>
           </div>
         </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm font-bold text-slate-700 mr-2">Filter Status:</span>
-        {STATUS_OPTIONS.map((status) => (
-          <button
-            key={status}
-            onClick={() => setSelectedStatus(status)}
-            className={`px-5 py-2 rounded-xl text-sm font-bold capitalize transition-all ${
-              selectedStatus === status
-                ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
-                : "bg-white border border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50"
-            }`}
-          >
-            {status}
-          </button>
-        ))}
-
-        {stats.online > 0 && (
-          <div className="ml-auto flex items-center gap-2 rounded-xl bg-violet-50 border border-violet-100 px-4 py-2 text-xs font-bold text-violet-700">
-            <Globe size={16} />
-            {stats.online} Online Events (Not on map)
+        <div className="col-span-2 flex items-center gap-4 rounded-[24px] border border-violet-100 bg-violet-50/80 p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 dark:border-violet-500/20 dark:bg-violet-500/10 xl:col-span-1">
+          <div className="rounded-2xl bg-white p-3 shadow-sm"><Compass className="text-violet-500" size={20} /></div>
+          <div>
+            <p className="text-xs font-bold uppercase text-violet-700">Online Events</p>
+            <p className="text-2xl font-black text-violet-900">{stats.online}</p>
           </div>
-        )}
+        </div>
       </div>
 
-      <div className="relative rounded-2xl overflow-hidden border-2 border-slate-200 shadow-inner">
+      <div className="rounded-[28px] border border-white/70 bg-white/75 p-5 shadow-sm dark:border-white/10 dark:bg-slate-900/70">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="mr-2 text-sm font-bold text-slate-700 dark:text-slate-200">Filter Status:</span>
+            {STATUS_OPTIONS.map((status) => (
+              <button
+                key={status}
+                onClick={() => setSelectedStatus(status)}
+                className={`rounded-full px-5 py-2.5 text-sm font-semibold capitalize transition-all duration-300 ${
+                  selectedStatus === status
+                    ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/25"
+                    : "border border-slate-200 bg-white text-slate-600 hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-violet-500/30 dark:hover:text-violet-300"
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+
+          {stats.online > 0 && (
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet-100 bg-violet-50 px-4 py-2 text-xs font-bold text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300">
+              <Globe size={16} />
+              {stats.online} Online Events (Not on map)
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="relative overflow-hidden rounded-[30px] border border-white/70 bg-white/80 p-3 shadow-[0_24px_70px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-900/70 dark:shadow-[0_24px_70px_rgba(2,6,23,0.45)]">
         {locationGroups.length > 0 ? (
-          <div
-            ref={mapRef}
-            className="h-[550px] w-full z-0"
-            style={{ background: "#e5e7eb" }}
-          />
+          <div className="overflow-hidden rounded-[24px] border border-slate-200 shadow-inner dark:border-white/10">
+            <div
+              ref={mapRef}
+              className="z-0 h-[550px] w-full"
+              style={{ background: "#e5e7eb" }}
+            />
+          </div>
         ) : (
-          <div className="h-[550px] w-full bg-slate-50 flex flex-col items-center justify-center">
-            <MapPin className="h-12 w-12 text-slate-300 mb-3" />
-            <p className="text-slate-600 font-bold text-lg">No locations found</p>
-            <p className="text-slate-400 text-sm mt-1">Try searching for a different city or changing the status filter.</p>
+          <div className="flex h-[550px] w-full flex-col items-center justify-center rounded-[24px] bg-slate-50 dark:bg-slate-800/70">
+            <MapPin className="mb-3 h-12 w-12 text-slate-300 dark:text-slate-600" />
+            <p className="text-lg font-bold text-slate-600 dark:text-slate-200">No locations found</p>
+            <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">Try searching for a different city or changing the status filter.</p>
           </div>
         )}
       </div>
