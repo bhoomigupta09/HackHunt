@@ -8,45 +8,54 @@ import {
   Search,
   Sparkles,
   Trophy,
-  Globe
+  Globe,
+  Info
 } from "lucide-react";
 import { apiClient } from "../../api/client";
-
 import mockHackathons from "../../data/unstop_scraped_data.json";
+
+/** * CLEANER: Sanitizes date strings for Reliable Parsing
+ * Strips common scraper prefixes like "Posted", "Ends in", etc.
+ */
+const cleanDate = (dateStr) => {
+  if (!dateStr || dateStr === "N/A") return null;
+  return dateStr.replace(/(Posted|Ends|Starts|in|on|at)/gi, "").trim();
+};
 
 /** Map GET /hackathons/live items to the card model used in this component */
 function mapLiveApiToCard(h) {
-  const deadline = h.deadline && h.deadline !== "N/A" ? String(h.deadline) : "";
-  let calculatedStatus = "upcoming";
-  if (deadline) {
-    const end = Date.parse(deadline);
+  const deadlineStr = cleanDate(h.deadline);
+  let calculatedStatus = "upcoming"; 
+
+  if (deadlineStr) {
+    const end = Date.parse(deadlineStr);
     if (!Number.isNaN(end)) {
-      calculatedStatus = end < Date.now() ? "ended" : "upcoming";
+      calculatedStatus = end < Date.now() ? "ended" : "ongoing";
     }
   }
-  const desc =
-    Array.isArray(h.tags) && h.tags.length
+
+  const desc = Array.isArray(h.tags) && h.tags.length
       ? h.tags.join(" · ")
-      : `Listed on ${h.platform}. Open the event page to register.`;
+      : `Listed on ${h.platform || "Unstop"}. Open the event page to register.`;
 
   return {
-    _id: h.id,
-    id: h.id,
+    _id: h.id || h._id,
+    id: h.id || h._id,
     title: h.title,
     description: desc,
-    organizerName: h.platform || "External",
-    location: "Online",
-    totalPrize: h.prize,
-    prize: h.prize,
-    imageUrl: h.image,
-    mode: "online",
+    organizerName: h.platform || h.organization || h.organizer || "External",
+    location: h.location || "Online",
+    totalPrize: h.prize || h.totalPrize,
+    prize: h.prize || h.totalPrize,
+    imageUrl: h.image || h.logoUrl || h.bannerUrl || "https://unstop.com/images/unstop-logo.svg",
+    mode: h.mode || h.type || "online",
     calculatedStatus,
-    startDate: deadline || "See event page",
-    endDate: deadline,
+    startDate: h.startDate || h.deadline || "See event page",
+    endDate: h.endDate || h.deadline,
     tags: Array.isArray(h.tags) ? h.tags : [],
-    registrationUrl: h.url,
+    registrationUrl: h.url || h.registrationUrl || (h.seo_url ? `https://unstop.com/${h.seo_url}` : null),
     isLiveScraped: true,
-    sourcePlatform: h.platform
+    sourcePlatform: h.platform || "Unstop"
   };
 }
 
@@ -58,37 +67,47 @@ const getStatusTone = (status) => {
 };
 
 const getModeIcon = (mode) => {
-  if (mode === "online") return <Globe size={14} className="mr-1" />;
-  if (mode === "in-person") return <MapPin size={14} className="mr-1" />;
+  const normalizedMode = String(mode).toLowerCase();
+  if (normalizedMode.includes("online")) return <Globe size={14} className="mr-1" />;
+  if (normalizedMode.includes("in-person") || normalizedMode.includes("offline")) return <MapPin size={14} className="mr-1" />;
   return <Sparkles size={14} className="mr-1" />;
 };
 
-// FIXED: Advanced Status Parser (Same as Map)
+// Robust Status Parser for local/mock data
 const getHackathonStatus = (hackathon) => {
   try {
-    const cleanStartDateStr = (hackathon.startDate || "").replace("Posted ", "").trim();
-    const start = new Date(cleanStartDateStr);
-    const end = hackathon.endDate ? new Date(hackathon.endDate) : new Date(start.getTime() + (3 * 24 * 60 * 60 * 1000));
+    const startStr = cleanDate(hackathon.startDate);
+    const endStr = cleanDate(hackathon.endDate);
+    
     const now = new Date();
+    const start = startStr ? new Date(startStr) : null;
+    const end = endStr ? new Date(endStr) : (start ? new Date(start.getTime() + 86400000 * 3) : null);
 
-    if (!isNaN(end.getTime()) && end < now) return "ended";
-    if (!isNaN(start.getTime()) && start > now) return "upcoming";
-    if (!isNaN(start.getTime()) && start <= now && end >= now) return "ongoing";
-  } catch (e) {}
-  
-  const normalized = String(hackathon?.status || "").toLowerCase();
-  if (normalized === "open" || normalized === "active") return "ongoing";
-  return "ended";
+    if (end && !isNaN(end.getTime()) && end < now) return "ended";
+    if (start && !isNaN(start.getTime()) && start > now) return "upcoming";
+    
+    const normalized = String(hackathon?.status || "").toLowerCase();
+    if (normalized === "open" || normalized === "active" || normalized === "approved") return "ongoing";
+    
+    return "ongoing"; 
+  } catch (e) {
+    return "ongoing";
+  }
 };
 
 function formatMockRow(h) {
   const calculatedStatus = getHackathonStatus(h);
   return {
     ...h,
-    _id: h.id,
-    mode: h.type,
-    organizerName: h.organizer,
-    prize: h.totalPrize,
+    _id: h.id || h._id,
+    id: h.id || h._id,
+    title: h.title,
+    description: h.description || h.details || "More details available on the event page.",
+    imageUrl: h.logoUrl || h.bannerUrl || h.image || h.imageUrl || "https://unstop.com/images/unstop-logo.svg",
+    registrationUrl: h.seo_url ? `https://unstop.com/${h.seo_url}` : (h.url || h.registrationUrl),
+    mode: h.type || h.mode || "online",
+    organizerName: h.organizer || h.organization || "Unstop",
+    prize: h.totalPrize || h.prize || "See page",
     calculatedStatus
   };
 }
@@ -99,7 +118,7 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [dataSource, setDataSource] = useState(""); // 'live' | 'local'
+  const [dataSource, setDataSource] = useState("");
 
   const loadData = async () => {
     try {
@@ -111,11 +130,9 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
         const res = await apiClient.getLiveScrapedHackathons();
         const live = res.hackathons || [];
         rows = live.map(mapLiveApiToCard);
-        if (rows.length > 0) {
-          setDataSource("live");
-        }
+        if (rows.length > 0) setDataSource("live");
       } catch (apiErr) {
-        console.warn("Live hackathons API:", apiErr?.message || apiErr);
+        console.warn("Live API fallback to local:", apiErr?.message);
       }
 
       if (rows.length === 0) {
@@ -125,56 +142,43 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
 
       setHackathons(rows);
     } catch (err) {
-      console.error("Error loading hackathons:", err);
-      setError("Could not load hackathons. Try again later.");
-      try {
-        const fallback = mockHackathons.map(formatMockRow);
-        setHackathons(fallback);
-        setDataSource("local");
-      } catch {
-        setHackathons([]);
-      }
+      setError("Could not load hackathons.");
     } finally {
       setLoading(false);
     }
   };
-  useEffect(() => {
-    loadData();
-  }, []);
+
+  useEffect(() => { loadData(); }, []);
 
   useEffect(() => {
-    if (typeof initialSearchTerm === "string" && initialSearchTerm.trim()) {
-      setSearchTerm(initialSearchTerm.trim());
-    }
+    if (initialSearchTerm) setSearchTerm(initialSearchTerm.trim());
   }, [initialSearchTerm]);
 
-  // FIXED: Bulletproof Filter Logic
   const filteredHackathons = useMemo(() => {
-    return hackathons.filter((hackathon) => {
-      // 1. Search Logic (Title, Description, Organizer, Location)
-      const searchTarget = `
-        ${hackathon.title || ""} 
-        ${hackathon.description || ""} 
-        ${hackathon.organizerName || ""} 
-        ${hackathon.location || ""}
-        ${hackathon.sourcePlatform || ""}
-      `.toLowerCase();
-      
+    return hackathons.filter((h) => {
+      const searchTarget = `${h.title} ${h.description} ${h.organizerName} ${h.location} ${h.sourcePlatform}`.toLowerCase();
       const matchesSearch = !searchTerm || searchTarget.includes(searchTerm.toLowerCase().trim());
-
-      // 2. Status Logic
-      const matchesStatus = filterStatus === "all" || hackathon.calculatedStatus === filterStatus;
-      
+      const matchesStatus = filterStatus === "all" || h.calculatedStatus === filterStatus;
       return matchesSearch && matchesStatus;
     });
   }, [filterStatus, hackathons, searchTerm]);
 
+  // FULLY FIXED: URL construction is now safe
   const handleRegister = (hackathon) => {
-    const url = hackathon.registrationUrl || hackathon.url;
-    if (url && String(url).startsWith("http")) {
+    let url = hackathon.registrationUrl || hackathon.url;
+    
+    if (url) {
+      if (url.startsWith("http://") || url.startsWith("https://")) {
+        // It's already a full valid URL, do nothing
+      } else {
+        // It's a relative path, safely append unstop.com
+        const cleanPath = url.startsWith("/") ? url.substring(1) : url;
+        url = `https://unstop.com/${cleanPath}`;
+      }
+      
       window.open(url, "_blank", "noopener,noreferrer");
     } else {
-      setError("Could not find a registration URL for this hackathon.");
+      setError("Registration link is currently unavailable.");
       setTimeout(() => setError(""), 3000);
     }
   };
@@ -188,235 +192,126 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <section className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.16),transparent_28%),linear-gradient(135deg,#ffffff,#f8fafc)] p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700">
-              <Sparkles size={14} />
-              {dataSource === "live" ? "Live feed (Devpost only)" : "Discovery"}
-            </div>
-            <h3 className="mt-4 text-3xl font-bold tracking-[-0.04em] text-slate-950">
-              Explore Premium Hackathons
-            </h3>
-            <p className="mt-3 text-base leading-7 text-slate-600">
-              {dataSource === "live"
-                ? "Live listings from the server (Devpost API only). Register opens the official event page."
-                : "Discover cutting-edge events, compete with the best, and build the future."}
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">Total Events</div>
-              <div className="mt-2 text-3xl font-bold text-slate-950">{hackathons.length}</div>
-            </div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Active Events</div>
-              <div className="mt-2 text-3xl font-bold text-slate-950">
-                {hackathons.filter((item) => item.calculatedStatus === "ongoing").length}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Alerts */}
+    <div className="space-y-8 relative">
+      {/* Error Toast */}
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <div className="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg font-bold animate-bounce">
           {error}
         </div>
       )}
 
-      {/* Filters */}
-      <section className="rounded-[28px] border border-white/70 bg-white/85 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur">
-        <div className="flex flex-col gap-4 lg:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by title, location, or organizer..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-12 py-3.5 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-500/10"
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-500">
-              <Filter size={16} />
+      {/* Header Stats */}
+      <section className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.16),transparent_28%),linear-gradient(135deg,#ffffff,#f8fafc)] p-6 shadow-sm">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">
+              <Sparkles size={14} /> {dataSource === "live" ? "LIVE FEED" : "LOCAL DATABASE"}
             </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-medium text-slate-900 outline-none transition cursor-pointer focus:border-violet-300 focus:ring-4 focus:ring-violet-500/10"
-            >
-              <option value="all">All Statuses</option>
-              <option value="upcoming">Upcoming</option>
-              <option value="ongoing">Ongoing</option>
-              <option value="ended">Ended</option>
-            </select>
+            <h3 className="mt-4 text-3xl font-bold text-slate-950">Browse Hackathons</h3>
+          </div>
+          <div className="flex gap-4">
+            <div className="rounded-2xl bg-white border p-4 text-center">
+              <p className="text-xs font-bold text-slate-400">TOTAL</p>
+              <p className="text-2xl font-bold">{hackathons.length}</p>
+            </div>
+            <div className="rounded-2xl bg-white border p-4 text-center">
+              <p className="text-xs font-bold text-emerald-500">ACTIVE</p>
+              <p className="text-2xl font-bold">
+                {hackathons.filter(h => h.calculatedStatus !== "ended").length}
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Grid of Advanced Cards */}
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col gap-4 lg:flex-row p-4 bg-white/50 rounded-3xl border border-white">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search hackathons..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-violet-100 transition outline-none"
+          />
+        </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="rounded-2xl border border-slate-200 px-6 py-3 font-semibold text-slate-700 outline-none"
+        >
+          <option value="all">All Status</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="ongoing">Ongoing</option>
+          <option value="ended">Ended</option>
+        </select>
+      </div>
+
+      {/* Grid */}
       {filteredHackathons.length > 0 ? (
         <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
-          {filteredHackathons.map((hackathon, index) => {
-            const isEnded = hackathon.calculatedStatus === "ended";
+          {filteredHackathons.map((hackathon, index) => (
+            <article
+              key={hackathon._id || index}
+              className="group flex flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white transition-all hover:shadow-xl hover:-translate-y-1"
+            >
+              <div className="relative h-48 w-full bg-slate-100 flex items-center justify-center">
+                {hackathon.imageUrl ? (
+                  <img src={hackathon.imageUrl} className="h-full w-full object-cover" alt="banner" 
+                       onError={(e) => { e.target.src = "https://unstop.com/images/unstop-logo.svg"; e.target.className = "h-1/2 w-1/2 object-contain opacity-50"; }}/>
+                ) : (
+                  <Sparkles className="text-slate-300" size={48} />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                <span className={`absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold uppercase ${getStatusTone(hackathon.calculatedStatus)}`}>
+                  {hackathon.calculatedStatus}
+                </span>
+                <div className="absolute bottom-4 left-4 right-4 text-white">
+                  <h4 className="text-xl font-bold truncate">{hackathon.title}</h4>
+                  <p className="text-sm opacity-80">{hackathon.organizerName}</p>
+                </div>
+              </div>
 
-            return (
-              <article
-                key={hackathon._id}
-                className="group relative flex flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(79,70,229,0.15)]"
-                style={{ animation: `feature-fade-up 0.55s ease-out ${index * 0.06}s both` }}
-              >
-                {/* Advanced Image Header */}
-                <div className="relative h-56 w-full overflow-hidden bg-slate-100">
-                  {hackathon.imageUrl ? (
-                    <img
-                      src={hackathon.imageUrl}
-                      alt={hackathon.title}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-violet-500 to-fuchsia-600" />
-                  )}
-                  {/* Overlay Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent" />
-                  
-                  {/* Floating Badges inside Image */}
-                  <div className="absolute left-5 top-5 flex gap-2">
-                    <span className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wider backdrop-blur-md ${getStatusTone(hackathon.calculatedStatus)}`}>
-                      {hackathon.calculatedStatus}
-                    </span>
+              <div className="p-6 flex-1 flex flex-col">
+                <p className="text-sm text-slate-600 line-clamp-2 mb-4">{hackathon.description}</p>
+                
+                <div className="flex flex-wrap gap-4 mb-6">
+                  <div className="flex items-center text-xs font-semibold text-slate-500">
+                    <Calendar size={14} className="mr-1 text-violet-500" /> {hackathon.startDate}
                   </div>
-                  
-                  <div className="absolute right-5 top-5 flex flex-col items-end gap-1">
-                    {hackathon.sourcePlatform && (
-                      <span className="rounded-full bg-black/40 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-md">
-                        {hackathon.sourcePlatform}
-                      </span>
-                    )}
-                    <span className="flex items-center rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-md border border-white/20 capitalize">
-                      {getModeIcon(hackathon.mode)}
-                      {hackathon.mode}
-                    </span>
+                  <div className="flex items-center text-xs font-semibold text-slate-500">
+                    {getModeIcon(hackathon.mode)} <span className="capitalize">{hackathon.mode}</span>
                   </div>
-
-                  {/* Title overlaying image bottom */}
-                  <div className="absolute bottom-5 left-5 right-5">
-                    <h4 className="text-2xl font-bold tracking-tight text-white line-clamp-1 shadow-sm">
-                      {hackathon.title}
-                    </h4>
-                    <p className="mt-1 text-sm font-medium text-slate-300 flex items-center gap-1.5">
-                       <Trophy size={14} className="text-yellow-400" />
-                       {hackathon.prize || "Prize TBA"} • {hackathon.organizerName}
-                    </p>
+                  <div className="flex items-center text-xs font-semibold text-slate-500">
+                    <Trophy size={14} className="mr-1 text-amber-500" /> {hackathon.prize}
                   </div>
                 </div>
-
-                {/* Card Body */}
-                <div className="flex flex-1 flex-col p-6">
-                  {/* Short description limit */}
-                  <p className="text-sm leading-relaxed text-slate-600 line-clamp-2 mb-6">
-                    {(hackathon.description || "")
-                      .replace(/[#*]/g, "")
-                      .trim()}
-                  </p>
-
-                  <div className="grid gap-3 sm:grid-cols-2 mb-6">
-                    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 border border-slate-100">
-                      <div className="rounded-full bg-blue-100 p-2 text-blue-600"><Calendar size={16} /></div>
-                      <div>
-                        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Date</div>
-                        <div className="text-sm font-semibold text-slate-900">
-                          {String(hackathon.startDate || "")
-                            .replace("Posted", "")
-                            .trim() || "TBA"}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 border border-slate-100">
-                      <div className="rounded-full bg-red-100 p-2 text-red-600"><MapPin size={16} /></div>
-                      <div className="w-full overflow-hidden">
-                        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Location</div>
-                        <div className="text-sm font-semibold text-slate-900 truncate" title={hackathon.location}>
-                          {hackathon.location ? hackathon.location.split(',').slice(-2).join(',') : "Online"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-2 mb-6 mt-auto">
-                    {(hackathon.tags || []).slice(0, 3).map((tag) => (
-                      <span key={tag} className="rounded-lg bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 border border-violet-100">
-                        {tag}
-                      </span>
-                    ))}
-                    {(hackathon.tags || []).length > 3 && (
-                       <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                         +{hackathon.tags.length - 3} more
-                       </span>
-                    )}
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
-                    {hackathon.isLiveScraped &&
-                    hackathon.registrationUrl &&
-                    String(hackathon.registrationUrl).startsWith("http") ? (
-                      <a
-                        href={hackathon.registrationUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3.5 text-sm font-bold text-violet-700 transition-colors duration-200 hover:bg-violet-100 text-center"
-                      >
-                        View Details
-                      </a>
-                    ) : hackathon.calculatedStatus === "ongoing" ? (
-                      <Link
-                        to={`/hackathon/${hackathon._id || hackathon.id}`}
-                        className="flex-1 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3.5 text-sm font-bold text-violet-700 transition-colors duration-200 hover:bg-violet-100 text-center"
-                      >
-                        View Details
-                      </Link>
-                    ) : (
-                      <div className="flex-1" />
-                    )}
-
-                    <button
-                      onClick={() => handleRegister(hackathon)}
-                      disabled={isEnded}
-                      className={`flex flex-1 items-center justify-center rounded-2xl px-4 py-3.5 text-sm font-bold text-white transition-all ${
-                        !isEnded
-                            ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/40 hover:-translate-y-0.5"
-                            : "bg-slate-300 text-slate-500"
-                      } disabled:cursor-not-allowed`}
-                    >
-                      {isEnded
-                        ? "Event Ended"
-                        : "Register Now"
-                      }
-                      <ArrowUpRight size={16} className="ml-1.5 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                    </button>
-                  </div>
+                
+                <div className="mt-auto pt-4 border-t flex gap-3">
+                  <Link
+                    to={`/hackathons/${hackathon._id}`}
+                    className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Info size={16} />
+                    View Details
+                  </Link>
+                  <button
+                    onClick={() => handleRegister(hackathon)}
+                    disabled={hackathon.calculatedStatus === "ended"}
+                    className="flex-1 bg-violet-600 text-white py-3 rounded-xl font-bold hover:bg-violet-700 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2"
+                  >
+                    {hackathon.calculatedStatus === "ended" ? "Closed" : "Register Now"}
+                    <ArrowUpRight size={16} />
+                  </button>
                 </div>
-              </article>
-            );
-          })}
+              </div>
+            </article>
+          ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-[32px] border-2 border-dashed border-slate-200 bg-slate-50/50 py-24 text-center">
-          <Sparkles className="mb-4 h-10 w-10 text-slate-300" />
-          <h3 className="text-lg font-bold text-slate-900">No hackathons found</h3>
-          <p className="mt-2 text-sm text-slate-500 max-w-sm">
-            We couldn't find any hackathons matching your current filters. Try adjusting your search or status.
-          </p>
+        <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed">
+          <p className="text-slate-400 font-bold">No hackathons found matching your criteria.</p>
         </div>
       )}
     </div>

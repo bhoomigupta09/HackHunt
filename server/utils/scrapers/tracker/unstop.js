@@ -43,13 +43,20 @@ function collectHackathonLikeArrays(obj, depth = 0, out = []) {
 }
 
 function mapRow(h) {
-  const url =
+  let url =
     h.public_url ||
     (h.seo_url ? `https://unstop.com/hackathons/${h.seo_url}` : "") ||
     (typeof h._id === "string" ? `https://unstop.com/hackathon/${h._id}` : "");
+
+  // FIX: Ensure the URL is absolute by appending Unstop's domain if it's missing
+  if (url && !url.startsWith("http")) {
+    const cleanPath = url.startsWith("/") ? url.substring(1) : url;
+    url = `https://unstop.com/${cleanPath}`;
+  }
+
   return {
     title: h.title || h.name || "Untitled",
-    url,
+    url: url,
     deadline: h.end_date || h.registration_end_date || h.start_date || "N/A",
     prize: h.prize_money != null ? `$${h.prize_money}` : "N/A",
     participants: h.registered_count || 0,
