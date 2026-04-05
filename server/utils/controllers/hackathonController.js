@@ -69,52 +69,56 @@ const mapOpenStateToStatus = (openState) => {
   if (normalized === "upcoming" || normalized === "scheduled" || normalized === "planned") return "upcoming";
   return "open";
 };
-
 const getLiveHackathons = async (req, res) => {
   try {
     console.log("🚀 API HIT: /hackathons/live");
     
-    // path.resolve use kiya hai exact absolute path dekhne ke liye
-    const dataPath = path.resolve(__dirname, "../../../hackathon-tracker/hackathon-tracker/backend/data/hackathons.json");
-    console.log("📂 Checking for file exactly at:", dataPath);
-    
-    if (fs.existsSync(dataPath)) {
-      console.log("✅ File FOUND!");
-      const fileData = fs.readFileSync(dataPath, "utf8");
-      const parsedData = JSON.parse(fileData);
-      console.log(`📊 Found ${parsedData.hackathons?.length} hackathons in file.`);
-      
-      const formattedHackathons = (parsedData.hackathons || []).map((h, index) => {
-        const { startDate, endDate } = parseHackathonDateRange(h.deadline);
-        const status = mapOpenStateToStatus(h.open_state || h.status || h.openState);
-
-        return {
-          ...h,
-          id: h.id || `live-${h.source}-${index}`,
-          _id: h.id || `live-${h.source}-${index}`,
-          platform: h.source,
-          image: h.thumbnail,
-          type: "online",
-          location: h.location || "Online",
-          status,
-          startDate,
-          endDate
-        };
-      });
-      
-      return res.json({
-        success: true,
-        total: formattedHackathons.length,
-        hackathons: formattedHackathons
-      });
-    } else {
-      console.log("❌ FILE NOT FOUND!");
-      return res.json({ success: true, total: 0, hackathons: [] });
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.log("❌ Database not connected");
+      return res.json({ success: false, total: 0, hackathons: [] });
     }
+
+    console.log("✅ Fetching live hackathons from MongoDB...");
+    
+    // Fetch directly from the MongoDB 'hackathons' collection instead of the JSON file
+    const dbHackathons = await mongoose.connection.collection('hackathons').find({}).toArray();
+    console.log(`📊 Found ${dbHackathons.length} hackathons in MongoDB.`);
+    
+    const formattedHackathons = dbHackathons.map((h, index) => {
+      // Safely parse dates and status depending on how your scraper saved them
+      const { startDate, endDate } = parseHackathonDateRange(h.deadline || h.startDate || h.end_date);
+      const status = mapOpenStateToStatus(h.open_state || h.status || h.openState || 'upcoming');
+
+      return {
+        ...h,
+        // Convert MongoDB ObjectId to string so the React frontend can use it as a key/ID
+        id: h._id ? h._id.toString() : `live-${index}`,
+        _id: h._id ? h._id.toString() : `live-${index}`,
+        platform: h.source || h.source_name || h.organizer || "Database",
+        image: h.thumbnail || h.imageUrl || h.image_url,
+        type: h.type || "online",
+        location: h.location || "Online",
+        status,
+        startDate,
+        endDate,
+        title: h.title,
+        description: h.description,
+        registrationUrl: h.url || h.registrationUrl || h.registration_url,
+        totalPrize: h.totalPrize || h.total_prize || ""
+      };
+    });
+    
+    return res.json({
+      success: true,
+      total: formattedHackathons.length,
+      hackathons: formattedHackathons
+    });
+    
   } catch (error) {
     console.error("❌ Error in getLiveHackathons:", error.message);
     res.status(500).json({
-      message: "Failed to fetch live hackathons",
+      message: "Failed to fetch live hackathons from MongoDB",
       error: error.message
     });
   }
@@ -529,7 +533,9 @@ const registerForHackathon = async (req, res) => {
       return res.status(404).json({ message: "User not found." });
     }
 
-    if (!hackathon || hackathon.status !== "approved") {
+    // Allow registration if it's approved, open, or upcoming
+    const validStatuses = ["approved", "open", "upcoming", "active"];
+    if (!hackathon || !validStatuses.includes(hackathon.status.toLowerCase())) {
       return res.status(404).json({ message: "Hackathon is not available for registration." });
     }
 

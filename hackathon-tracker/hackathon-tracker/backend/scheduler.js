@@ -1,17 +1,22 @@
+require("dotenv").config(); // Loads variables from .env
 const path = require("path");
 const mongoose = require("mongoose");
 const scrapeDevpost = require("./scrapers/devpost");
 const scrapeUnstop = require("./scrapers/unstop");
 const scrapeDoraHacks = require("./scrapers/dorahacks");
 
-// Update this with your actual MongoDB URI
-const MONGO_URI = process.env.MONGO_URI || "YOUR_MONGODB_URI_HERE";
+const MONGO_URI = process.env.MONGO_URI;
 
 const hackathonSchema = new mongoose.Schema({}, { strict: false });
 const Hackathon = mongoose.models.Hackathon || mongoose.model("Hackathon", hackathonSchema, "hackathons");
 
 async function refreshData() {
   console.log("Refreshing data...");
+  
+  if (!MONGO_URI) {
+      console.error("ERROR: MONGO_URI is not defined. Check your .env file.");
+      return;
+  }
   
   // Ensure connection exists if this file is run directly from the terminal
   if (mongoose.connection.readyState === 0) {
@@ -44,7 +49,6 @@ async function refreshData() {
 
 module.exports = refreshData;
 
-// THIS IS THE NEW CODE: 
 // It tells the file to run the scraper immediately if you execute it directly in the terminal.
 if (require.main === module) {
   refreshData();

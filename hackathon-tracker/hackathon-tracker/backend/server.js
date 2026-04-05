@@ -1,4 +1,6 @@
+require("dotenv").config(); // Loads variables from .env
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -9,8 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// Update this with your actual MongoDB URI
-const MONGO_URI = process.env.MONGO_URI ;
+const MONGO_URI = process.env.MONGO_URI;
 
 // Define a flexible Schema to accept data from your scrapers
 const hackathonSchema = new mongoose.Schema({}, { strict: false });
@@ -46,12 +47,19 @@ app.get("/api/refresh", async (req, res) => {
   res.json({ message: "Refreshed!" });
 });
 
+// Check if MONGO_URI is properly loaded before trying to connect
+if (!MONGO_URI) {
+  console.error("FATAL ERROR: MONGO_URI is not defined. Please check your .env file.");
+  process.exit(1); 
+}
+
 // Connect to MongoDB, then start the server
 mongoose.connect(MONGO_URI)
   .then(async () => {
-    console.log("Connected to MongoDB");
+    console.log("Connected to MongoDB successfully");
     app.listen(3000, async () => {
       console.log("Server running at http://localhost:3000");
+      // Optional: automatically refresh data when the server starts
       await refreshData();
     });
   })
