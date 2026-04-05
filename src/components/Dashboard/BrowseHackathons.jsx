@@ -163,13 +163,9 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
 
   const handleRegister = async (hackathon) => {
     const externalUrl = hackathon.registrationUrl || hackathon.url;
-    if (externalUrl && String(externalUrl).startsWith("http")) {
-      window.open(externalUrl, "_blank", "noopener,noreferrer");
-      return;
-    }
+    const userId = user?.id || localStorage.getItem("userId");
 
     if (hackathon.isInternal) {
-      const userId = user?.id || localStorage.getItem("userId");
       if (!userId) {
         setError("Please sign in again to register for this hackathon.");
         setTimeout(() => setError(""), 3000);
@@ -180,20 +176,33 @@ const BrowseHackathons = ({ user, initialSearchTerm = "" }) => {
         setRegisteringId(hackathon._id || hackathon.id);
         setError("");
         setSuccess("");
+
         await apiClient.registerForHackathon(hackathon._id || hackathon.id, {
           userId,
           teamName: "",
           teamMembers: 1
         });
-        setSuccess(`Registered successfully.`);
+
+        setSuccess(
+          `Registered successfully.${externalUrl ? " Opening registration page..." : ""}`
+        );
         setTimeout(() => setSuccess(""), 3000);
         setReloadKey((value) => value + 1);
+
+        if (externalUrl && String(externalUrl).startsWith("http")) {
+          window.open(externalUrl, "_blank", "noopener,noreferrer");
+        }
       } catch (err) {
         setError(err.message || "Failed to register for hackathon.");
         setTimeout(() => setError(""), 3000);
       } finally {
         setRegisteringId("");
       }
+      return;
+    }
+
+    if (externalUrl && String(externalUrl).startsWith("http")) {
+      window.open(externalUrl, "_blank", "noopener,noreferrer");
       return;
     }
 

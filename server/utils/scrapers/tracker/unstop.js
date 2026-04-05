@@ -42,6 +42,27 @@ function collectHackathonLikeArrays(obj, depth = 0, out = []) {
   return out;
 }
 
+function parseParticipants(h) {
+  const rawValue =
+    h.registered_count ??
+    h.registration_count ??
+    h.register_count ??
+    h.registrations_count ??
+    h.participants ??
+    h.participant_count ??
+    h.hacker_count ??
+    h.attendees_count ??
+    h.attendees ??
+    0;
+
+  if (typeof rawValue === "string") {
+    const normalized = rawValue.replace(/[^\d]/g, "");
+    return Number.isFinite(Number(normalized)) ? Number(normalized) : 0;
+  }
+
+  return Number.isFinite(Number(rawValue)) ? Number(rawValue) : 0;
+}
+
 function mapRow(h) {
   let url =
     h.public_url ||
@@ -59,7 +80,7 @@ function mapRow(h) {
     url: url,
     deadline: h.end_date || h.registration_end_date || h.start_date || "N/A",
     prize: h.prize_money != null ? `$${h.prize_money}` : "N/A",
-    participants: h.registered_count || 0,
+    participants: parseParticipants(h),
     thumbnail: h.cover_image || h.logoUrl2 || h.banner || "",
     source: "Unstop",
     themes: Array.isArray(h.themes) ? h.themes : []
