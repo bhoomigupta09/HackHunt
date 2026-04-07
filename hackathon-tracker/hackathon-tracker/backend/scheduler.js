@@ -1,8 +1,9 @@
 require("dotenv").config(); // Loads variables from .env
 const path = require("path");
 const mongoose = require("mongoose");
-
+const scrapeDevpost = require("./scrapers/devpost");
 const scrapeUnstop = require("./scrapers/unstop");
+const scrapeDoraHacks = require("./scrapers/dorahacks");
 
 const MONGO_URI = process.env.MONGO_URI;
 

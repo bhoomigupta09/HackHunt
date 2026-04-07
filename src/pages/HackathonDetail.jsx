@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -16,6 +16,9 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { useHackathon } from '../hooks/useHackathons';
+import RegistrationFormModal from '../components/Dashboard/RegistrationFormModal';
+
+const RECENTLY_VIEWED_KEY = "hackhunt_recently_viewed_hackathons";
 
 const HackathonDetail = () => {
   const { id } = useParams();
@@ -23,11 +26,38 @@ const HackathonDetail = () => {
   const [registering, setRegistering] = useState(false);
   const [registerError, setRegisterError] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState("");
+  const [showRegModal, setShowRegModal] = useState(false);
+  const [submittingReg, setSubmittingReg] = useState(false);
+
+  useEffect(() => {
+    if (!loading && hackathon) {
+      try {
+        const saved = localStorage.getItem(RECENTLY_VIEWED_KEY);
+        const existing = saved ? JSON.parse(saved) : [];
+        const item = {
+          id: hackathon.id || hackathon._id,
+          title: hackathon.title || 'Untitled Hackathon',
+          imageUrl: hackathon.imageUrl || hackathon.image || '',
+          organizer: hackathon.organizer || hackathon.organizerName || '',
+          status: hackathon.status || 'upcoming',
+          startDate: hackathon.startDate || hackathon.endDate || ''
+        };
+
+        const filtered = Array.isArray(existing)
+          ? existing.filter((h) => h?.id !== item.id)
+          : [];
+
+        const updated = [item, ...filtered].slice(0, 5);
+        localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }, [hackathon, loading]);
 
   const isValidObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(String(value));
 
-  const handleRegister = async () => {
-    const externalUrl = hackathon?.registrationUrl || hackathon?.url;
+  const handleRegister = () => {
     const userId = localStorage.getItem('userId');
 
     if (!userId) {
@@ -36,43 +66,46 @@ const HackathonDetail = () => {
       return;
     }
 
-    if (hackathon && isValidObjectId(hackathon.id)) {
-      try {
-        setRegistering(true);
-        setRegisterError('');
-        setRegisterSuccess('');
+    setShowRegModal(true);
+  };
 
-        await apiClient.registerForHackathon(hackathon.id, {
-          userId,
-          teamName: '',
-          teamMembers: 1
-        });
+  const handleRegistrationSubmit = async (formData) => {
+    const externalUrl = hackathon?.registrationUrl || hackathon?.url;
+    const userId = localStorage.getItem('userId');
 
-        setRegisterSuccess(
-          `Registered successfully.${externalUrl ? ' Opening registration page...' : ''}`
-        );
-        setTimeout(() => setRegisterSuccess(''), 4000);
+    if (!hackathon || !isValidObjectId(hackathon.id)) {
+      setRegisterError('Invalid hackathon.');
+      setTimeout(() => setRegisterError(''), 4000);
+      return;
+    }
 
-        if (externalUrl && String(externalUrl).startsWith('http')) {
-          window.open(externalUrl, '_blank', 'noopener,noreferrer');
-        }
-      } catch (err) {
-        const message = err.message || 'Failed to register for hackathon.';
-        setRegisterError(message);
-        setTimeout(() => setRegisterError(''), 4000);
-      } finally {
-        setRegistering(false);
+    try {
+      setSubmittingReg(true);
+      setRegisterError('');
+      setRegisterSuccess('');
+
+      await apiClient.registerForHackathon(hackathon.id, {
+        userId,
+        teamName: formData.teamName,
+        teamMembers: formData.teamMembers
+      });
+
+      setRegisterSuccess(
+        `Registered successfully.${externalUrl ? ' Opening registration page...' : ''}`
+      );
+      setTimeout(() => setRegisterSuccess(''), 4000);
+      setShowRegModal(false);
+
+      if (externalUrl && String(externalUrl).startsWith('http')) {
+        window.open(externalUrl, '_blank', 'noopener,noreferrer');
       }
-      return;
+    } catch (err) {
+      const message = err.message || 'Failed to register for hackathon.';
+      setRegisterError(message);
+      setTimeout(() => setRegisterError(''), 4000);
+    } finally {
+      setSubmittingReg(false);
     }
-
-    if (externalUrl && String(externalUrl).startsWith('http')) {
-      window.open(externalUrl, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    setRegisterError('Could not find a registration URL for this hackathon.');
-    setTimeout(() => setRegisterError(''), 4000);
   };
 
   if (loading) {
@@ -374,10 +407,9 @@ const HackathonDetail = () => {
             <button
               type="button"
               onClick={handleRegister}
-              disabled={registering}
-              className="w-full bg-white text-purple-600 py-3 px-4 rounded-lg font-semibold hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full bg-white text-purple-600 py-3 px-4 rounded-lg font-semibold hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center"
             >
-              {registering ? 'Registering...' : 'Register Now'}
+              Register Now
               <ExternalLink className="h-4 w-4 ml-2" />
             </button>
             {registerSuccess && (
@@ -413,6 +445,14 @@ const HackathonDetail = () => {
           )}
         </div>
       </div>
+
+      <RegistrationFormModal
+        open={showRegModal}
+        hackathon={hackathon}
+        onClose={() => setShowRegModal(false)}
+        onSubmit={handleRegistrationSubmit}
+        loading={submittingReg}
+      />
     </div>
   );
 };
